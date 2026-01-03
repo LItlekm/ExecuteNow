@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>任务拆解助手</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 主界面 -->
+    <div class="app-container" id="mainView">
+        <header class="header">
+            <h1 class="title">任务拆解助手</h1>
+            <div class="header-actions">
+                <button id="settingsBtn" class="btn btn-icon" title="设置">
+                    <span>⚙️</span>
+                </button>
+                <button id="themeToggle" class="btn btn-icon" title="切换主题">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 快速操作 -->
+            <section class="quick-actions">
+                <button id="createTaskBtn" class="action-card action-card-primary">
+                    <span class="action-icon">✨</span>
+                    <span class="action-text">创建新任务</span>
+                </button>
+                <button id="useTemplateBtn" class="action-card action-card-secondary">
+                    <span class="action-icon">📋</span>
+                    <span class="action-text">使用模板</span>
+                </button>
+            </section>
+
+            <!-- 任务列表 -->
+            <section class="task-list-section">
+                <div class="section-header">
+                    <h2 class="section-title">我的任务</h2>
+                    <span class="task-count" id="taskCount">0 个任务</span>
+                </div>
+                <div class="task-list" id="taskList">
+                    <div class="empty-state" id="emptyState">
+                        <span class="empty-icon">🎯</span>
+                        <p class="empty-text">还没有任务</p>
+                        <p class="empty-hint">创建一个任务，把它拆解成小步骤</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p class="footer-text">杀死拖延症的是极致的具体</p>
+        </footer>
+    </div>
+
+    <!-- 专注模式界面 -->
+    <div class="focus-mode" id="focusMode">
+        <header class="focus-header">
+            <div class="focus-task-name" id="focusTaskName">任务名称</div>
+            <button id="exitFocusBtn" class="btn btn-ghost">退出</button>
+        </header>
+
+        <main class="focus-main">
+            <!-- 进度 -->
+            <div class="focus-progress">
+                <span class="progress-text">第 <span id="currentStepNum">1</span> 步 / 共 <span id="totalStepNum">5</span> 步</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <!-- 当前步骤 -->
+            <div class="focus-step-container">
+                <div class="focus-step-card" id="focusStepCard">
+                    <div class="step-content" id="stepContent">
+                        当前步骤内容
+                    </div>
+                </div>
+            </div>
+
+            <!-- 教练话语 -->
+            <div class="coach-message">
+                <span class="coach-avatar" id="coachAvatar">👩</span>
+                <p class="coach-text" id="coachMessage">准备好了吗？我们开始吧~</p>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="focus-actions">
+                <button id="completeStepBtn" class="btn btn-complete">
+                    <span class="btn-icon">✓</span>
+                    <span>完成这一步</span>
+                </button>
+            </div>
+
+            <div class="focus-secondary-actions">
+                <button id="skipStepBtn" class="btn btn-ghost">跳过</button>
+                <button id="shelveTaskBtn" class="btn btn-ghost">搁置任务</button>
+            </div>
+        </main>
+
+        <!-- 完成动画覆盖层 -->
+        <div class="completion-overlay" id="completionOverlay">
+            <div class="completion-content">
+                <span class="completion-icon">🎉</span>
+                <p class="completion-text">太棒了！任务完成！</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建任务弹窗 -->
+    <div class="modal-overlay" id="createTaskModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title">创建新任务</h3>
+                <button class="modal-close" id="closeCreateModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">任务名称</label>
+                    <input type="text" id="taskNameInput" class="form-input" placeholder="例如：写周报" maxlength="50">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">选择教练</label>
+                    <div class="coach-selector" id="coachSelector">
+                        <!-- 教练选项将动态生成 -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">添加步骤</label>
+                    <div class="step-input-row">
+                        <input type="text" id="stepInput" class="form-input" placeholder="输入一个具体的小步骤" maxlength="100">
+                        <button id="addStepBtn" class="btn btn-primary">添加</button>
+                    </div>
+                    <p class="form-hint">提示：步骤越具体越好，比如"打开电脑"而不是"开始工作"</p>
+                </div>
+
+                <div class="steps-preview" id="stepsPreview">
+                    <div class="steps-list" id="stepsList">
+                        <!-- 步骤列表将动态生成 -->
+                    </div>
+                    <p class="steps-empty" id="stepsEmpty">还没有添加步骤</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelCreateTask">取消</button>
+                <button class="btn btn-primary" id="confirmCreateTask" disabled>创建任务</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 选择模板弹窗 -->
+    <div class="modal-overlay" id="templateModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title">选择模板</h3>
+                <button class="modal-close" id="closeTemplateModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="template-categories" id="templateCategories">
+                    <!-- 分类标签将动态生成 -->
+                </div>
+                <div class="template-grid" id="templateGrid">
+                    <!-- 模板卡片将动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模板预览弹窗 -->
+    <div class="modal-overlay" id="templatePreviewModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="previewTemplateName">模板名称</h3>
+                <button class="modal-close" id="closePreviewModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">选择教练</label>
+                    <div class="coach-selector" id="previewCoachSelector">
+                        <!-- 教练选项将动态生成 -->
+                    </div>
+                </div>
+                <div class="preview-steps" id="previewSteps">
+                    <!-- 步骤预览将动态生成 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelUseTemplate">取消</button>
+                <button class="btn btn-primary" id="confirmUseTemplate">使用此模板</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搁置任务弹窗 -->
+    <div class="modal-overlay" id="shelveModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h3 class="modal-title">搁置任务</h3>
+                <button class="modal-close" id="closeShelveModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">暂时放下这个任务，之后可以继续</p>
+                <textarea id="shelveReasonInput" class="form-textarea" placeholder="记录一下搁置原因（可选）" maxlength="200"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelShelve">取消</button>
+                <button class="btn btn-warning" id="confirmShelve">确认搁置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">设置</h3>
+                <button class="modal-close" id="closeSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">默认教练</span>
+                        <span class="setting-description">创建任务时的默认教练</span>
+                    </div>
+                    <select id="defaultCoachSelect" class="form-select">
+                        <!-- 选项将动态生成 -->
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">完成震动反馈</span>
+                        <span class="setting-description">完成步骤时震动提示</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="vibrationToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">清除所有数据</span>
+                        <span class="setting-description">删除所有任务和设置</span>
+                    </div>
+                    <button id="clearDataBtn" class="btn btn-danger btn-sm">清除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h3 class="modal-title">确认删除</h3>
+                <button class="modal-close" id="closeDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">确定要删除这个任务吗？此操作无法撤销。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelDelete">取消</button>
+                <button class="btn btn-danger" id="confirmDelete">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="templates.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
