@@ -485,6 +485,47 @@ body {
     transition: width var(--transition-slow);
 }
 
+/* 步骤计时器 */
+.step-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius-full);
+    box-shadow: var(--shadow-sm);
+}
+
+.step-timer .timer-icon {
+    font-size: 1.2rem;
+}
+
+.step-timer .timer-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    color: var(--text-primary);
+    min-width: 70px;
+    text-align: center;
+}
+
+/* 计时器超过1分钟时的警示效果 */
+.step-timer.warning .timer-value {
+    color: var(--color-warning);
+}
+
+/* 计时器超过3分钟时的紧急效果 */
+.step-timer.urgent .timer-value {
+    color: var(--color-danger);
+    animation: timerPulse 1s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* 步骤卡片 */
 .focus-step-container {
     width: 100%;

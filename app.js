@@ -220,6 +220,10 @@ class App {
         this.pendingDeleteTaskId = null;
         this.selectedCategory = '全部';
 
+        // 步骤计时器
+        this.stepTimerInterval = null;
+        this.stepTimerSeconds = 0;
+
         this.initElements();
         this.initEventListeners();
         this.applyTheme();
@@ -252,6 +256,8 @@ class App {
         this.coachMessage = document.getElementById('coachMessage');
         this.focusStepCard = document.getElementById('focusStepCard');
         this.completionOverlay = document.getElementById('completionOverlay');
+        this.stepTimerDisplay = document.getElementById('stepTimerDisplay');
+        this.stepTimerContainer = document.querySelector('.step-timer');
 
         this.exitFocusBtn = document.getElementById('exitFocusBtn');
         this.completeStepBtn = document.getElementById('completeStepBtn');
@@ -508,14 +514,20 @@ class App {
             // 创建一个临时的查看状态
             this.viewOnlyMode = true;
             this.viewCurrentStep = 0;
+            // 查看模式隐藏计时器
+            this.stepTimerContainer.style.display = 'none';
         } else {
             this.viewOnlyMode = false;
+            // 显示计时器并开始计时
+            this.stepTimerContainer.style.display = 'flex';
+            this.startStepTimer();
         }
 
         this.updateFocusMode();
     }
 
     exitFocusMode() {
+        this.stopStepTimer();
         this.focusMode.classList.remove('active');
         this.currentTask = null;
         this.viewOnlyMode = false;
@@ -598,9 +610,12 @@ class App {
         const task = this.taskManager.completeStep(this.currentTask.id);
 
         if (task.status === 'completed') {
-            // 显示完成动画
+            // 停止计时器并显示完成动画
+            this.stopStepTimer();
             this.showCompletionAnimation();
         } else {
+            // 重置计时器开始下一步
+            this.startStepTimer();
             this.updateFocusMode();
         }
     }
@@ -614,8 +629,12 @@ class App {
         const task = this.taskManager.skipStep(this.currentTask.id);
 
         if (task.status === 'completed') {
+            // 停止计时器并显示完成动画
+            this.stopStepTimer();
             this.showCompletionAnimation();
         } else {
+            // 重置计时器开始下一步
+            this.startStepTimer();
             setTimeout(() => this.updateFocusMode(), 500);
         }
     }
@@ -908,6 +927,54 @@ class App {
             this.taskManager.deleteTask(this.pendingDeleteTaskId);
             this.hideDeleteConfirmModal();
             this.render();
+        }
+    }
+
+    // ==================== 步骤计时器 ====================
+
+    startStepTimer() {
+        this.stopStepTimer();
+        this.stepTimerSeconds = 0;
+        this.updateStepTimerDisplay();
+
+        this.stepTimerInterval = setInterval(() => {
+            this.stepTimerSeconds++;
+            this.updateStepTimerDisplay();
+            this.updateTimerStyle();
+        }, 1000);
+    }
+
+    stopStepTimer() {
+        if (this.stepTimerInterval) {
+            clearInterval(this.stepTimerInterval);
+            this.stepTimerInterval = null;
+        }
+    }
+
+    resetStepTimer() {
+        this.stepTimerSeconds = 0;
+        this.updateStepTimerDisplay();
+        this.updateTimerStyle();
+    }
+
+    updateStepTimerDisplay() {
+        const minutes = Math.floor(this.stepTimerSeconds / 60);
+        const seconds = this.stepTimerSeconds % 60;
+        this.stepTimerDisplay.textContent =
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    updateTimerStyle() {
+        // 移除所有状态类
+        this.stepTimerContainer.classList.remove('warning', 'urgent');
+
+        // 超过3分钟显示紧急状态
+        if (this.stepTimerSeconds >= 180) {
+            this.stepTimerContainer.classList.add('urgent');
+        }
+        // 超过1分钟显示警告状态
+        else if (this.stepTimerSeconds >= 60) {
+            this.stepTimerContainer.classList.add('warning');
         }
     }
 }
