@@ -29,9 +29,11 @@ class TaskManager {
             steps: steps.map(s => ({
                 content: s,
                 completed: false,
-                skipped: false
+                skipped: false,
+                timeSpent: 0  // 每个步骤的用时（秒）
             })),
             currentStep: 0,
+            currentStepTime: 0,  // 当前步骤已用时间（用于暂停/恢复）
             status: 'in_progress', // in_progress, completed, shelved
             shelveReason: '',
             coachId: coachId,
@@ -65,13 +67,15 @@ class TaskManager {
     }
 
     // 完成当前步骤
-    completeStep(taskId) {
+    completeStep(taskId, stepTime = 0) {
         const task = this.getTask(taskId);
         if (!task) return null;
 
         if (task.currentStep < task.steps.length) {
             task.steps[task.currentStep].completed = true;
+            task.steps[task.currentStep].timeSpent = stepTime;
             task.currentStep++;
+            task.currentStepTime = 0;  // 重置当前步骤时间
 
             // 检查是否完成所有步骤
             if (task.currentStep >= task.steps.length) {
@@ -85,13 +89,15 @@ class TaskManager {
     }
 
     // 跳过当前步骤
-    skipStep(taskId) {
+    skipStep(taskId, stepTime = 0) {
         const task = this.getTask(taskId);
         if (!task) return null;
 
         if (task.currentStep < task.steps.length) {
             task.steps[task.currentStep].skipped = true;
+            task.steps[task.currentStep].timeSpent = stepTime;
             task.currentStep++;
+            task.currentStepTime = 0;  // 重置当前步骤时间
 
             // 检查是否完成所有步骤
             if (task.currentStep >= task.steps.length) {
@@ -102,6 +108,22 @@ class TaskManager {
             this.saveToStorage();
         }
         return task;
+    }
+
+    // 保存当前步骤的临时时间（用于暂停/退出时保存）
+    saveCurrentStepTime(taskId, stepTime) {
+        const task = this.getTask(taskId);
+        if (!task) return null;
+
+        task.currentStepTime = stepTime;
+        this.saveToStorage();
+        return task;
+    }
+
+    // 获取任务总用时
+    getTotalTime(task) {
+        if (!task) return 0;
+        return task.steps.reduce((total, step) => total + (step.timeSpent || 0), 0);
     }
 
     // 搁置任务
@@ -223,6 +245,7 @@ class App {
         // 步骤计时器
         this.stepTimerInterval = null;
         this.stepTimerSeconds = 0;
+        this.timerPaused = false;
 
         this.initElements();
         this.initEventListeners();
@@ -257,7 +280,11 @@ class App {
         this.focusStepCard = document.getElementById('focusStepCard');
         this.completionOverlay = document.getElementById('completionOverlay');
         this.stepTimerDisplay = document.getElementById('stepTimerDisplay');
-        this.stepTimerContainer = document.querySelector('.step-timer');
+        this.stepTimerContainer = document.getElementById('stepTimerContainer');
+        this.stepTimerWrapper = document.querySelector('.step-timer-wrapper');
+        this.pauseTimerBtn = document.getElementById('pauseTimerBtn');
+        this.totalTimeDisplay = document.getElementById('totalTimeDisplay');
+        this.completedStepsDisplay = document.getElementById('completedStepsDisplay');
 
         this.exitFocusBtn = document.getElementById('exitFocusBtn');
         this.completeStepBtn = document.getElementById('completeStepBtn');
@@ -324,6 +351,7 @@ class App {
         this.completeStepBtn.addEventListener('click', () => this.completeCurrentStep());
         this.skipStepBtn.addEventListener('click', () => this.skipCurrentStep());
         this.shelveTaskBtn.addEventListener('click', () => this.showShelveModal());
+        this.pauseTimerBtn.addEventListener('click', () => this.toggleTimerPause());
 
         // 创建任务弹窗
         this.closeCreateModal.addEventListener('click', () => this.hideCreateTaskModal());
@@ -515,11 +543,15 @@ class App {
             this.viewOnlyMode = true;
             this.viewCurrentStep = 0;
             // 查看模式隐藏计时器
-            this.stepTimerContainer.style.display = 'none';
+            this.stepTimerWrapper.style.display = 'none';
         } else {
             this.viewOnlyMode = false;
             // 显示计时器并开始计时
-            this.stepTimerContainer.style.display = 'flex';
+            this.stepTimerWrapper.style.display = 'flex';
+            // 恢复之前保存的步骤时间
+            this.stepTimerSeconds = task.currentStepTime || 0;
+            this.timerPaused = false;
+            this.updatePauseButtonIcon();
             this.startStepTimer();
         }
 
@@ -527,10 +559,15 @@ class App {
     }
 
     exitFocusMode() {
+        // 保存当前步骤的时间（如果不是查看模式）
+        if (this.currentTask && !this.viewOnlyMode) {
+            this.taskManager.saveCurrentStepTime(this.currentTask.id, this.stepTimerSeconds);
+        }
         this.stopStepTimer();
         this.focusMode.classList.remove('active');
         this.currentTask = null;
         this.viewOnlyMode = false;
+        this.timerPaused = false;
         this.render();
     }
 
@@ -607,7 +644,9 @@ class App {
             navigator.vibrate(50);
         }
 
-        const task = this.taskManager.completeStep(this.currentTask.id);
+        // 保存当前步骤的用时
+        const stepTime = this.stepTimerSeconds;
+        const task = this.taskManager.completeStep(this.currentTask.id, stepTime);
 
         if (task.status === 'completed') {
             // 停止计时器并显示完成动画
@@ -615,6 +654,9 @@ class App {
             this.showCompletionAnimation();
         } else {
             // 重置计时器开始下一步
+            this.stepTimerSeconds = 0;
+            this.timerPaused = false;
+            this.updatePauseButtonIcon();
             this.startStepTimer();
             this.updateFocusMode();
         }
@@ -626,7 +668,9 @@ class App {
         const coach = COACHES.find(c => c.id === this.currentTask.coachId) || COACHES[0];
         this.coachMessage.textContent = getRandomMessage(coach, 'skip');
 
-        const task = this.taskManager.skipStep(this.currentTask.id);
+        // 保存当前步骤的用时
+        const stepTime = this.stepTimerSeconds;
+        const task = this.taskManager.skipStep(this.currentTask.id, stepTime);
 
         if (task.status === 'completed') {
             // 停止计时器并显示完成动画
@@ -634,6 +678,9 @@ class App {
             this.showCompletionAnimation();
         } else {
             // 重置计时器开始下一步
+            this.stepTimerSeconds = 0;
+            this.timerPaused = false;
+            this.updatePauseButtonIcon();
             this.startStepTimer();
             setTimeout(() => this.updateFocusMode(), 500);
         }
@@ -644,6 +691,15 @@ class App {
         const finishMessage = getRandomMessage(coach, 'finish');
 
         this.completionOverlay.querySelector('.completion-text').textContent = finishMessage;
+
+        // 显示时间统计
+        const totalSeconds = this.taskManager.getTotalTime(this.currentTask);
+        this.totalTimeDisplay.textContent = this.formatTime(totalSeconds);
+
+        const completedSteps = this.currentTask.steps.filter(s => s.completed).length;
+        const totalSteps = this.currentTask.steps.length;
+        this.completedStepsDisplay.textContent = `${completedSteps}/${totalSteps}`;
+
         this.completionOverlay.classList.add('active');
 
         // 震动反馈
@@ -654,7 +710,19 @@ class App {
         setTimeout(() => {
             this.completionOverlay.classList.remove('active');
             this.exitFocusMode();
-        }, 2500);
+        }, 3500);  // 延长显示时间以便查看统计
+    }
+
+    // 格式化时间为 HH:MM:SS
+    formatTime(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     // ==================== 创建任务弹窗 ====================
@@ -934,13 +1002,14 @@ class App {
 
     startStepTimer() {
         this.stopStepTimer();
-        this.stepTimerSeconds = 0;
         this.updateStepTimerDisplay();
 
         this.stepTimerInterval = setInterval(() => {
-            this.stepTimerSeconds++;
-            this.updateStepTimerDisplay();
-            this.updateTimerStyle();
+            if (!this.timerPaused) {
+                this.stepTimerSeconds++;
+                this.updateStepTimerDisplay();
+                this.updateTimerStyle();
+            }
         }, 1000);
     }
 
@@ -951,10 +1020,33 @@ class App {
         }
     }
 
+    toggleTimerPause() {
+        this.timerPaused = !this.timerPaused;
+        this.updatePauseButtonIcon();
+
+        if (this.timerPaused) {
+            this.stepTimerContainer.classList.add('paused');
+            // 保存当前时间
+            if (this.currentTask) {
+                this.taskManager.saveCurrentStepTime(this.currentTask.id, this.stepTimerSeconds);
+            }
+        } else {
+            this.stepTimerContainer.classList.remove('paused');
+        }
+    }
+
+    updatePauseButtonIcon() {
+        const icon = this.pauseTimerBtn.querySelector('.pause-icon');
+        icon.textContent = this.timerPaused ? '▶️' : '⏸️';
+        this.pauseTimerBtn.title = this.timerPaused ? '继续' : '暂停';
+    }
+
     resetStepTimer() {
         this.stepTimerSeconds = 0;
+        this.timerPaused = false;
         this.updateStepTimerDisplay();
         this.updateTimerStyle();
+        this.updatePauseButtonIcon();
     }
 
     updateStepTimerDisplay() {
@@ -965,7 +1057,7 @@ class App {
     }
 
     updateTimerStyle() {
-        // 移除所有状态类
+        // 移除所有状态类（保留 paused 类）
         this.stepTimerContainer.classList.remove('warning', 'urgent');
 
         // 超过3分钟显示紧急状态

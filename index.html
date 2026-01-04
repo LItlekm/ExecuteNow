@@ -72,9 +72,14 @@
             </div>
 
             <!-- 步骤计时器 -->
-            <div class="step-timer">
-                <span class="timer-icon">⏱️</span>
-                <span class="timer-value" id="stepTimerDisplay">00:00</span>
+            <div class="step-timer-wrapper">
+                <div class="step-timer" id="stepTimerContainer">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-value" id="stepTimerDisplay">00:00</span>
+                </div>
+                <button id="pauseTimerBtn" class="btn btn-timer-control" title="暂停">
+                    <span class="pause-icon">⏸️</span>
+                </button>
             </div>
 
             <!-- 当前步骤 -->
@@ -111,6 +116,16 @@
             <div class="completion-content">
                 <span class="completion-icon">🎉</span>
                 <p class="completion-text">太棒了！任务完成！</p>
+                <div class="completion-stats" id="completionStats">
+                    <div class="stat-item">
+                        <span class="stat-label">总用时</span>
+                        <span class="stat-value" id="totalTimeDisplay">00:00:00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">完成步骤</span>
+                        <span class="stat-value" id="completedStepsDisplay">0/0</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
