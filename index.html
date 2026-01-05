@@ -177,15 +177,41 @@
     <div class="modal-overlay" id="templateModal">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h3 class="modal-title">选择模板</h3>
+                <div class="template-tabs">
+                    <button class="tab-btn active" data-tab="preset">预设模板</button>
+                    <button class="tab-btn" data-tab="custom">我的模板</button>
+                </div>
                 <button class="modal-close" id="closeTemplateModal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="template-categories" id="templateCategories">
-                    <!-- 分类标签将动态生成 -->
+                <!-- 预设模板标签页 -->
+                <div class="tab-content active" id="presetTab">
+                    <div class="template-categories" id="templateCategories">
+                        <!-- 分类标签将动态生成 -->
+                    </div>
+                    <div class="template-grid" id="templateGrid">
+                        <!-- 模板卡片将动态生成 -->
+                    </div>
                 </div>
-                <div class="template-grid" id="templateGrid">
-                    <!-- 模板卡片将动态生成 -->
+
+                <!-- 自定义模板标签页 -->
+                <div class="tab-content" id="customTab">
+                    <div class="custom-header">
+                        <button id="createCustomBtn" class="btn btn-primary">
+                            <span>+ 创建模板</span>
+                        </button>
+                        <button id="importBtn" class="btn btn-secondary">
+                            <span>📥 导入</span>
+                        </button>
+                    </div>
+                    <div class="template-grid" id="customGrid">
+                        <!-- 自定义模板卡片将动态生成 -->
+                    </div>
+                    <div class="empty-state" id="customEmpty" style="display:none;">
+                        <span class="empty-icon">📝</span>
+                        <p class="empty-text">还没有自定义模板</p>
+                        <p class="empty-hint">创建你自己的专属模板</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -289,7 +315,87 @@
         </div>
     </div>
 
+    <!-- 自定义模板编辑器弹窗 -->
+    <div class="modal-overlay" id="customEditorModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title" id="editorTitle">创建模板</h3>
+                <button class="modal-close" id="closeEditorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 基础信息 -->
+                <div class="form-group">
+                    <label class="form-label">模板名称</label>
+                    <input type="text" id="editorName" class="form-input" placeholder="例如：晨间流程" maxlength="20">
+                </div>
+
+                <!-- 图标选择 -->
+                <div class="form-group">
+                    <label class="form-label">选择图标</label>
+                    <div class="icon-selector" id="iconSelector">
+                        <!-- 图标按钮将动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 分类 -->
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select id="editorCategory" class="form-select">
+                        <option value="日常">日常</option>
+                        <option value="工作">工作</option>
+                        <option value="学习">学习</option>
+                        <option value="健康">健康</option>
+                    </select>
+                </div>
+
+                <!-- 颜色（可选） -->
+                <div class="form-group">
+                    <label class="form-label">主题色（可选）</label>
+                    <div class="color-selector" id="colorSelector">
+                        <!-- 颜色按钮将动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 标签（可选） -->
+                <div class="form-group">
+                    <label class="form-label">标签（可选）</label>
+                    <div class="tags-wrapper">
+                        <div id="tagsDisplay"></div>
+                        <input type="text" id="tagInput" class="form-input" placeholder="按回车添加标签">
+                    </div>
+                </div>
+
+                <!-- 描述（可选） -->
+                <div class="form-group">
+                    <label class="form-label">描述（可选）</label>
+                    <textarea id="editorDesc" class="form-textarea" placeholder="简单描述这个模板的用途" maxlength="100"></textarea>
+                </div>
+
+                <!-- 步骤 -->
+                <div class="form-group">
+                    <label class="form-label">步骤</label>
+                    <div class="step-input-row">
+                        <input type="text" id="editorStepInput" class="form-input" placeholder="添加步骤">
+                        <button id="addEditorStep" class="btn btn-primary">添加</button>
+                    </div>
+                    <div class="steps-list" id="editorStepsList">
+                        <!-- 步骤列表将动态生成 -->
+                    </div>
+                    <p class="steps-empty" id="editorStepsEmpty">还没有添加步骤</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelEditor">取消</button>
+                <button class="btn btn-primary" id="saveEditor" disabled>保存模板</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="importFileInput" accept=".json" style="display:none">
+
     <script src="templates.js"></script>
+    <script src="customTemplates.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

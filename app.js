@@ -233,6 +233,7 @@ class App {
     constructor() {
         this.taskManager = new TaskManager();
         this.settingsManager = new SettingsManager();
+        this.customTemplateManager = new CustomTemplateManager();
 
         // 当前状态
         this.currentTask = null;
@@ -246,6 +247,19 @@ class App {
         this.stepTimerInterval = null;
         this.stepTimerSeconds = 0;
         this.timerPaused = false;
+
+        // 自定义模板编辑器状态
+        this.editingTemplateId = null;
+        this.currentTab = 'preset';  // 'preset' | 'custom'
+        this.editorData = {
+            name: '',
+            icon: '🌅',
+            category: '日常',
+            color: '#6366f1',
+            tags: [],
+            description: '',
+            steps: []
+        };
 
         this.initElements();
         this.initEventListeners();
@@ -337,6 +351,36 @@ class App {
         this.closeDeleteModal = document.getElementById('closeDeleteModal');
         this.cancelDelete = document.getElementById('cancelDelete');
         this.confirmDelete = document.getElementById('confirmDelete');
+
+        // 自定义模板 - 标签页
+        this.templateTabs = document.querySelectorAll('.tab-btn');
+        this.presetTab = document.getElementById('presetTab');
+        this.customTab = document.getElementById('customTab');
+
+        // 自定义模板 - 列表区域
+        this.createCustomBtn = document.getElementById('createCustomBtn');
+        this.importBtn = document.getElementById('importBtn');
+        this.customGrid = document.getElementById('customGrid');
+        this.customEmpty = document.getElementById('customEmpty');
+        this.importFileInput = document.getElementById('importFileInput');
+
+        // 自定义模板 - 编辑器弹窗
+        this.customEditorModal = document.getElementById('customEditorModal');
+        this.closeEditorModal = document.getElementById('closeEditorModal');
+        this.editorTitle = document.getElementById('editorTitle');
+        this.editorName = document.getElementById('editorName');
+        this.iconSelector = document.getElementById('iconSelector');
+        this.editorCategory = document.getElementById('editorCategory');
+        this.colorSelector = document.getElementById('colorSelector');
+        this.tagInput = document.getElementById('tagInput');
+        this.tagsDisplay = document.getElementById('tagsDisplay');
+        this.editorDesc = document.getElementById('editorDesc');
+        this.editorStepInput = document.getElementById('editorStepInput');
+        this.editorStepsList = document.getElementById('editorStepsList');
+        this.editorStepsEmpty = document.getElementById('editorStepsEmpty');
+        this.addEditorStep = document.getElementById('addEditorStep');
+        this.cancelEditor = document.getElementById('cancelEditor');
+        this.saveEditor = document.getElementById('saveEditor');
     }
 
     initEventListeners() {
@@ -407,6 +451,35 @@ class App {
         this.confirmDelete.addEventListener('click', () => this.deleteTask());
         this.deleteConfirmModal.addEventListener('click', (e) => {
             if (e.target === this.deleteConfirmModal) this.hideDeleteConfirmModal();
+        });
+
+        // 自定义模板 - 标签页切换
+        this.templateTabs.forEach(tab => {
+            tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
+        });
+
+        // 自定义模板 - 操作按钮
+        this.createCustomBtn.addEventListener('click', () => this.showCustomEditor());
+        this.importBtn.addEventListener('click', () => this.importFileInput.click());
+        this.importFileInput.addEventListener('change', (e) => this.handleImport(e));
+
+        // 自定义模板 - 编辑器弹窗
+        this.closeEditorModal.addEventListener('click', () => this.hideCustomEditor());
+        this.cancelEditor.addEventListener('click', () => this.hideCustomEditor());
+        this.saveEditor.addEventListener('click', () => this.saveCustomTemplate());
+        this.addEditorStep.addEventListener('click', () => this.addEditorStepMethod());
+        this.editorStepInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.addEditorStepMethod();
+        });
+        this.editorName.addEventListener('input', () => this.updateEditorSaveButton());
+        this.tagInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.addTag();
+            }
+        });
+        this.customEditorModal.addEventListener('click', (e) => {
+            if (e.target === this.customEditorModal) this.hideCustomEditor();
         });
     }
 
@@ -878,7 +951,14 @@ class App {
     // ==================== 模板预览弹窗 ====================
 
     showTemplatePreview(templateId) {
-        const template = TASK_TEMPLATES.find(t => t.id === templateId);
+        // 支持预设模板和自定义模板
+        let template;
+        if (templateId.startsWith('custom_')) {
+            template = this.customTemplateManager.getById(templateId);
+        } else {
+            template = TASK_TEMPLATES.find(t => t.id === templateId);
+        }
+
         if (!template) return;
 
         this.selectedTemplate = template;
@@ -976,6 +1056,340 @@ class App {
             this.render();
             this.hideSettingsModal();
         }
+    }
+
+    // ==================== 自定义模板功能 ====================
+
+    // 标签页切换
+    switchTab(tab) {
+        this.currentTab = tab;
+
+        // 更新标签按钮状态
+        this.templateTabs.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+
+        // 切换内容显示
+        this.presetTab.classList.toggle('active', tab === 'preset');
+        this.customTab.classList.toggle('active', tab === 'custom');
+
+        // 切换到自定义模板时刷新列表
+        if (tab === 'custom') {
+            this.renderCustomTemplateGrid();
+        }
+    }
+
+    // 渲染自定义模板网格
+    renderCustomTemplateGrid() {
+        const templates = this.customTemplateManager.getAll();
+
+        if (templates.length === 0) {
+            this.customGrid.style.display = 'none';
+            this.customEmpty.style.display = 'block';
+            return;
+        }
+
+        this.customGrid.style.display = 'grid';
+        this.customEmpty.style.display = 'none';
+
+        this.customGrid.innerHTML = templates.map(t => `
+            <div class="template-card custom-card" data-id="${t.id}">
+                <span class="template-icon" style="color: ${t.color || '#6366f1'}">${t.icon}</span>
+                <span class="template-name">${escapeHtml(t.name)}</span>
+                <span class="template-steps-count">${t.steps.length} 步</span>
+                <div class="template-actions">
+                    <button class="action-btn" data-action="edit" title="编辑">✏️</button>
+                    <button class="action-btn" data-action="export" title="导出">📤</button>
+                    <button class="action-btn" data-action="delete" title="删除">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+
+        // 绑定事件
+        this.customGrid.querySelectorAll('.template-card').forEach(card => {
+            const id = card.dataset.id;
+
+            // 点击卡片 = 预览（排除操作按钮区域）
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.template-actions')) {
+                    this.showTemplatePreview(id);
+                }
+            });
+
+            // 操作按钮事件
+            card.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+
+                    if (action === 'edit') this.showCustomEditor(id);
+                    else if (action === 'export') this.exportTemplate(id);
+                    else if (action === 'delete') this.confirmDeleteCustom(id);
+                });
+            });
+        });
+    }
+
+    // 显示自定义模板编辑器
+    showCustomEditor(templateId = null) {
+        this.editingTemplateId = templateId;
+
+        if (templateId) {
+            // 编辑模式 - 加载现有模板数据
+            const template = this.customTemplateManager.getById(templateId);
+            if (!template) return;
+
+            this.editorTitle.textContent = '编辑模板';
+            this.editorData = {
+                name: template.name,
+                icon: template.icon,
+                category: template.category,
+                color: template.color || '#6366f1',
+                tags: template.tags || [],
+                description: template.description || '',
+                steps: [...template.steps]
+            };
+        } else {
+            // 创建模式 - 初始化默认数据
+            this.editorTitle.textContent = '创建模板';
+            this.editorData = {
+                name: '',
+                icon: '🌅',
+                category: '日常',
+                color: '#6366f1',
+                tags: [],
+                description: '',
+                steps: []
+            };
+        }
+
+        // 填充表单
+        this.editorName.value = this.editorData.name || '';
+        this.editorCategory.value = this.editorData.category || '日常';
+        this.editorDesc.value = this.editorData.description || '';
+
+        // 渲染选择器和列表
+        this.renderIconSelector();
+        this.renderColorSelector();
+        this.renderEditorTags();
+        this.renderEditorSteps();
+        this.updateEditorSaveButton();
+
+        this.customEditorModal.classList.add('active');
+        this.editorName.focus();
+    }
+
+    // 隐藏编辑器
+    hideCustomEditor() {
+        this.customEditorModal.classList.remove('active');
+        this.editingTemplateId = null;
+    }
+
+    // 保存自定义模板
+    saveCustomTemplate() {
+        const data = {
+            name: this.editorName.value.trim(),
+            icon: this.editorData.icon,
+            category: this.editorCategory.value,
+            color: this.editorData.color,
+            tags: this.editorData.tags,
+            description: this.editorDesc.value.trim(),
+            steps: this.editorData.steps
+        };
+
+        // 验证数据
+        const validation = this.customTemplateManager.validateTemplate(data);
+        if (!validation.valid) {
+            alert(validation.errors.join('\n'));
+            return;
+        }
+
+        // 保存
+        if (this.editingTemplateId) {
+            this.customTemplateManager.update(this.editingTemplateId, data);
+        } else {
+            this.customTemplateManager.create(data);
+        }
+
+        this.hideCustomEditor();
+        this.renderCustomTemplateGrid();
+    }
+
+    // 确认删除自定义模板
+    confirmDeleteCustom(id) {
+        const template = this.customTemplateManager.getById(id);
+        if (!template) return;
+
+        if (confirm(`确定要删除模板"${template.name}"吗？此操作无法撤销。`)) {
+            this.customTemplateManager.delete(id);
+            this.renderCustomTemplateGrid();
+        }
+    }
+
+    // 导出模板
+    exportTemplate(id) {
+        this.customTemplateManager.exportTemplate(id);
+    }
+
+    // 导出所有自定义模板
+    exportAllCustomTemplates() {
+        this.customTemplateManager.exportAll();
+    }
+
+    // 导入模板
+    handleImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                const result = this.customTemplateManager.importTemplates(data);
+                alert(`成功导入 ${result.imported} 个模板`);
+                this.renderCustomTemplateGrid();
+            } catch (error) {
+                alert('导入失败：文件格式不正确');
+            }
+        };
+        reader.readAsText(file);
+
+        // 重置文件输入
+        event.target.value = '';
+    }
+
+    // 渲染图标选择器
+    renderIconSelector() {
+        const ICONS = [
+            '🌅', '💼', '📚', '🏃', '🧹', '📝', '🍳', '😴',
+            '📖', '🧘', '💻', '🎯', '⏰', '🎨', '🎵', '🏠',
+            '🚗', '✈️', '🏋️', '🧑‍💻', '📱', '🎓', '💡', '🌟'
+        ];
+
+        this.iconSelector.innerHTML = ICONS.map(icon => `
+            <button class="icon-option ${icon === this.editorData.icon ? 'selected' : ''}"
+                    data-icon="${icon}" type="button">${icon}</button>
+        `).join('');
+
+        this.iconSelector.querySelectorAll('.icon-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.editorData.icon = btn.dataset.icon;
+                this.renderIconSelector();
+            });
+        });
+    }
+
+    // 渲染颜色选择器
+    renderColorSelector() {
+        const COLORS = [
+            '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
+            '#f59e0b', '#10b981', '#06b6d4', '#64748b'
+        ];
+
+        this.colorSelector.innerHTML = COLORS.map(color => `
+            <button class="color-option ${color === this.editorData.color ? 'selected' : ''}"
+                    data-color="${color}" style="background: ${color}" type="button"
+                    title="${color}"></button>
+        `).join('');
+
+        this.colorSelector.querySelectorAll('.color-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.editorData.color = btn.dataset.color;
+                this.renderColorSelector();
+            });
+        });
+    }
+
+    // 添加标签
+    addTag() {
+        const tagText = this.tagInput.value.trim();
+        if (!tagText) return;
+
+        if (this.editorData.tags.includes(tagText)) {
+            alert('该标签已存在');
+            return;
+        }
+
+        this.editorData.tags.push(tagText);
+        this.tagInput.value = '';
+        this.renderEditorTags();
+    }
+
+    // 移除标签
+    removeTag(index) {
+        this.editorData.tags.splice(index, 1);
+        this.renderEditorTags();
+    }
+
+    // 渲染标签显示
+    renderEditorTags() {
+        if (this.editorData.tags.length === 0) {
+            this.tagsDisplay.innerHTML = '';
+            return;
+        }
+
+        this.tagsDisplay.innerHTML = this.editorData.tags.map((tag, index) => `
+            <span class="tag-item">
+                ${escapeHtml(tag)}
+                <button class="tag-remove" data-index="${index}" type="button">&times;</button>
+            </span>
+        `).join('');
+
+        this.tagsDisplay.querySelectorAll('.tag-remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.removeTag(parseInt(btn.dataset.index));
+            });
+        });
+    }
+
+    // 添加编辑器步骤
+    addEditorStepMethod() {
+        const stepText = this.editorStepInput.value.trim();
+        if (!stepText) return;
+
+        this.editorData.steps.push(stepText);
+        this.editorStepInput.value = '';
+        this.renderEditorSteps();
+        this.updateEditorSaveButton();
+        this.editorStepInput.focus();
+    }
+
+    // 移除编辑器步骤
+    removeEditorStep(index) {
+        this.editorData.steps.splice(index, 1);
+        this.renderEditorSteps();
+        this.updateEditorSaveButton();
+    }
+
+    // 渲染编辑器步骤列表
+    renderEditorSteps() {
+        if (this.editorData.steps.length === 0) {
+            this.editorStepsList.innerHTML = '';
+            this.editorStepsEmpty.style.display = 'block';
+            return;
+        }
+
+        this.editorStepsEmpty.style.display = 'none';
+        this.editorStepsList.innerHTML = this.editorData.steps.map((step, index) => `
+            <div class="step-item">
+                <span class="step-number">${index + 1}</span>
+                <span class="step-text">${escapeHtml(step)}</span>
+                <button class="step-remove" data-index="${index}" type="button">&times;</button>
+            </div>
+        `).join('');
+
+        this.editorStepsList.querySelectorAll('.step-remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.removeEditorStep(parseInt(btn.dataset.index));
+            });
+        });
+    }
+
+    // 更新保存按钮状态
+    updateEditorSaveButton() {
+        const hasName = this.editorName.value.trim().length > 0;
+        const hasSteps = this.editorData.steps.length > 0;
+        this.saveEditor.disabled = !(hasName && hasSteps);
     }
 
     // ==================== 删除确认弹窗 ====================
