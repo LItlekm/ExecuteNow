@@ -1371,18 +1371,74 @@ class App {
 
         this.editorStepsEmpty.style.display = 'none';
         this.editorStepsList.innerHTML = this.editorData.steps.map((step, index) => `
-            <div class="step-item">
+            <div class="step-item" data-index="${index}">
                 <span class="step-number">${index + 1}</span>
-                <span class="step-text">${escapeHtml(step)}</span>
-                <button class="step-remove" data-index="${index}" type="button">&times;</button>
+                <span class="step-text" data-index="${index}">${escapeHtml(step)}</span>
+                <div class="step-controls">
+                    <button class="step-control-btn" data-action="up" data-index="${index}"
+                            type="button" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="step-control-btn" data-action="down" data-index="${index}"
+                            type="button" title="下移" ${index === this.editorData.steps.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button class="step-control-btn" data-action="edit" data-index="${index}"
+                            type="button" title="编辑">✏️</button>
+                    <button class="step-remove" data-index="${index}" type="button" title="删除">&times;</button>
+                </div>
             </div>
         `).join('');
 
+        // 绑定事件
         this.editorStepsList.querySelectorAll('.step-remove').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.removeEditorStep(parseInt(btn.dataset.index));
             });
         });
+
+        this.editorStepsList.querySelectorAll('.step-control-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.index);
+                const action = btn.dataset.action;
+
+                if (action === 'up') this.moveStepUp(index);
+                else if (action === 'down') this.moveStepDown(index);
+                else if (action === 'edit') this.editEditorStep(index);
+            });
+        });
+
+        // 点击步骤文本也可以编辑
+        this.editorStepsList.querySelectorAll('.step-text').forEach(span => {
+            span.addEventListener('click', () => {
+                this.editEditorStep(parseInt(span.dataset.index));
+            });
+        });
+    }
+
+    // 上移步骤
+    moveStepUp(index) {
+        if (index === 0) return;
+        const temp = this.editorData.steps[index];
+        this.editorData.steps[index] = this.editorData.steps[index - 1];
+        this.editorData.steps[index - 1] = temp;
+        this.renderEditorSteps();
+    }
+
+    // 下移步骤
+    moveStepDown(index) {
+        if (index === this.editorData.steps.length - 1) return;
+        const temp = this.editorData.steps[index];
+        this.editorData.steps[index] = this.editorData.steps[index + 1];
+        this.editorData.steps[index + 1] = temp;
+        this.renderEditorSteps();
+    }
+
+    // 编辑步骤
+    editEditorStep(index) {
+        const currentText = this.editorData.steps[index];
+        const newText = prompt('编辑步骤内容:', currentText);
+
+        if (newText !== null && newText.trim() !== '') {
+            this.editorData.steps[index] = newText.trim();
+            this.renderEditorSteps();
+        }
     }
 
     // 更新保存按钮状态
