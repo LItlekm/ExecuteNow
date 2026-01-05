@@ -1371,74 +1371,173 @@ class App {
 
         this.editorStepsEmpty.style.display = 'none';
         this.editorStepsList.innerHTML = this.editorData.steps.map((step, index) => `
-            <div class="step-item" data-index="${index}">
+            <div class="step-item" data-index="${index}" draggable="true">
+                <span class="drag-handle" title="拖拽排序">⋮⋮</span>
                 <span class="step-number">${index + 1}</span>
                 <span class="step-text" data-index="${index}">${escapeHtml(step)}</span>
+                <input class="step-input" data-index="${index}" value="${escapeHtml(step)}"
+                       style="display:none;" maxlength="100" type="text">
                 <div class="step-controls">
-                    <button class="step-control-btn" data-action="up" data-index="${index}"
-                            type="button" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <button class="step-control-btn" data-action="down" data-index="${index}"
-                            type="button" title="下移" ${index === this.editorData.steps.length - 1 ? 'disabled' : ''}>↓</button>
-                    <button class="step-control-btn" data-action="edit" data-index="${index}"
-                            type="button" title="编辑">✏️</button>
                     <button class="step-remove" data-index="${index}" type="button" title="删除">&times;</button>
                 </div>
             </div>
         `).join('');
 
-        // 绑定事件
+        // 绑定删除事件
         this.editorStepsList.querySelectorAll('.step-remove').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.removeEditorStep(parseInt(btn.dataset.index));
             });
         });
 
-        this.editorStepsList.querySelectorAll('.step-control-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const index = parseInt(btn.dataset.index);
-                const action = btn.dataset.action;
-
-                if (action === 'up') this.moveStepUp(index);
-                else if (action === 'down') this.moveStepDown(index);
-                else if (action === 'edit') this.editEditorStep(index);
-            });
-        });
-
-        // 点击步骤文本也可以编辑
+        // 点击步骤文本进入编辑模式
         this.editorStepsList.querySelectorAll('.step-text').forEach(span => {
             span.addEventListener('click', () => {
-                this.editEditorStep(parseInt(span.dataset.index));
+                this.enterEditMode(parseInt(span.dataset.index));
+            });
+        });
+
+        // 设置拖拽排序
+        this.setupDragAndDrop();
+    }
+
+    // 进入编辑模式
+    enterEditMode(index) {
+        const item = this.editorStepsList.querySelector(`[data-index="${index}"]`);
+        if (!item) return;
+
+        const textSpan = item.querySelector('.step-text');
+        const input = item.querySelector('.step-input');
+
+        textSpan.style.display = 'none';
+        input.style.display = 'block';
+        input.focus();
+        input.select();
+
+        // 保存事件处理器引用，用于后续清理
+        input._saveHandler = () => this.saveStepEdit(index);
+        input._cancelHandler = (e) => {
+            if (e.key === 'Escape') this.cancelStepEdit(index);
+        };
+        input._enterHandler = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.saveStepEdit(index);
+            }
+        };
+
+        input.addEventListener('blur', input._saveHandler);
+        input.addEventListener('keydown', input._cancelHandler);
+        input.addEventListener('keypress', input._enterHandler);
+    }
+
+    // 保存编辑
+    saveStepEdit(index) {
+        const item = this.editorStepsList.querySelector(`[data-index="${index}"]`);
+        if (!item) return;
+
+        const input = item.querySelector('.step-input');
+        const newText = input.value.trim();
+
+        if (newText !== '') {
+            this.editorData.steps[index] = newText;
+        }
+
+        this.exitEditMode(index);
+        this.renderEditorSteps();
+    }
+
+    // 取消编辑
+    cancelStepEdit(index) {
+        this.exitEditMode(index);
+        const item = this.editorStepsList.querySelector(`[data-index="${index}"]`);
+        if (!item) return;
+
+        const textSpan = item.querySelector('.step-text');
+        const input = item.querySelector('.step-input');
+
+        input.style.display = 'none';
+        textSpan.style.display = 'block';
+    }
+
+    // 退出编辑模式
+    exitEditMode(index) {
+        const item = this.editorStepsList.querySelector(`[data-index="${index}"]`);
+        if (!item) return;
+
+        const input = item.querySelector('.step-input');
+
+        if (input._saveHandler) {
+            input.removeEventListener('blur', input._saveHandler);
+            input.removeEventListener('keydown', input._cancelHandler);
+            input.removeEventListener('keypress', input._enterHandler);
+            delete input._saveHandler;
+            delete input._cancelHandler;
+            delete input._enterHandler;
+        }
+    }
+
+    // 设置拖拽排序
+    setupDragAndDrop() {
+        let draggedIndex = null;
+
+        this.editorStepsList.querySelectorAll('.step-item').forEach(item => {
+            const index = parseInt(item.dataset.index);
+
+            // 开始拖拽
+            item.addEventListener('dragstart', (e) => {
+                draggedIndex = index;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.innerHTML);
+            });
+
+            // 拖拽结束
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                this.editorStepsList.querySelectorAll('.step-item').forEach(i => {
+                    i.classList.remove('drag-over');
+                });
+            });
+
+            // 拖拽经过
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                const targetIndex = parseInt(item.dataset.index);
+                if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                    item.classList.add('drag-over');
+                }
+            });
+
+            // 离开
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+
+            // 放下
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const targetIndex = parseInt(item.dataset.index);
+                if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                    this.reorderStep(draggedIndex, targetIndex);
+                }
+
+                item.classList.remove('drag-over');
             });
         });
     }
 
-    // 上移步骤
-    moveStepUp(index) {
-        if (index === 0) return;
-        const temp = this.editorData.steps[index];
-        this.editorData.steps[index] = this.editorData.steps[index - 1];
-        this.editorData.steps[index - 1] = temp;
+    // 重新排序步骤
+    reorderStep(fromIndex, toIndex) {
+        const steps = [...this.editorData.steps];
+        const [movedItem] = steps.splice(fromIndex, 1);
+        steps.splice(toIndex, 0, movedItem);
+        this.editorData.steps = steps;
         this.renderEditorSteps();
-    }
-
-    // 下移步骤
-    moveStepDown(index) {
-        if (index === this.editorData.steps.length - 1) return;
-        const temp = this.editorData.steps[index];
-        this.editorData.steps[index] = this.editorData.steps[index + 1];
-        this.editorData.steps[index + 1] = temp;
-        this.renderEditorSteps();
-    }
-
-    // 编辑步骤
-    editEditorStep(index) {
-        const currentText = this.editorData.steps[index];
-        const newText = prompt('编辑步骤内容:', currentText);
-
-        if (newText !== null && newText.trim() !== '') {
-            this.editorData.steps[index] = newText.trim();
-            this.renderEditorSteps();
-        }
     }
 
     // 更新保存按钮状态
