@@ -248,6 +248,8 @@ class App {
         this.stepTimerInterval = null;
         this.stepTimerSeconds = 0;
         this.timerPaused = false;
+        this.timerStartTime = null;        // 计时器开始的时间戳
+        this.timerAccumulatedSeconds = 0;  // 暂停前累积的秒数
 
         // 自定义模板编辑器状态
         this.editingTemplateId = null;
@@ -660,6 +662,7 @@ class App {
             this.stepTimerWrapper.style.display = 'flex';
             // 恢复之前保存的步骤时间
             this.stepTimerSeconds = task.currentStepTime || 0;
+            this.timerAccumulatedSeconds = this.stepTimerSeconds;
             this.timerPaused = false;
             this.updatePauseButtonIcon();
             this.startStepTimer();
@@ -1649,11 +1652,19 @@ class App {
 
     startStepTimer() {
         this.stopStepTimer();
+
+        // 记录开始时间戳
+        this.timerStartTime = Date.now();
+        // 保存之前累积的时间
+        this.timerAccumulatedSeconds = this.stepTimerSeconds;
+
         this.updateStepTimerDisplay();
 
         this.stepTimerInterval = setInterval(() => {
             if (!this.timerPaused) {
-                this.stepTimerSeconds++;
+                // 基于时间戳计算，而不是简单累加
+                const elapsed = Math.floor((Date.now() - this.timerStartTime) / 1000);
+                this.stepTimerSeconds = this.timerAccumulatedSeconds + elapsed;
                 this.updateStepTimerDisplay();
                 this.updateTimerStyle();
             }
@@ -1672,12 +1683,15 @@ class App {
         this.updatePauseButtonIcon();
 
         if (this.timerPaused) {
+            // 暂停时：保存当前累积的秒数
+            this.timerAccumulatedSeconds = this.stepTimerSeconds;
             this.stepTimerContainer.classList.add('paused');
-            // 保存当前时间
             if (this.currentTask) {
                 this.taskManager.saveCurrentStepTime(this.currentTask.id, this.stepTimerSeconds);
             }
         } else {
+            // 恢复时：重新记录开始时间戳
+            this.timerStartTime = Date.now();
             this.stepTimerContainer.classList.remove('paused');
         }
     }
