@@ -1023,7 +1023,14 @@ class App {
 
     // 触发完成按钮庆祝动画
     triggerCompleteAnimation() {
-        // 添加庆祝动画类
+        // 第一步：先隐藏勾选（准备动画）
+        this.completeStepBtn.classList.add('prepare-animate');
+
+        // 强制重绘，确保隐藏状态生效
+        void this.completeStepBtn.offsetWidth;
+
+        // 第二步：移除准备状态，添加庆祝动画类
+        this.completeStepBtn.classList.remove('prepare-animate');
         this.completeStepBtn.classList.add('celebrating');
 
         // 创建涟漪效果

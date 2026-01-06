@@ -1037,6 +1037,12 @@ body::before {
     stroke-dasharray: 28;
     stroke-dashoffset: 0;
     filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
+    transition: none;
+}
+
+/* 准备动画状态 - 先隐藏勾选 */
+.btn-complete.prepare-animate .check-path {
+    stroke-dashoffset: 28;
 }
 
 /* 光爆效果元素 */
