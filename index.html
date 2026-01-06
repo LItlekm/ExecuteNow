@@ -100,12 +100,18 @@
             <!-- 操作按钮 -->
             <div class="focus-actions">
                 <button id="completeStepBtn" class="btn btn-complete">
-                    <svg class="btn-check-icon" viewBox="0 0 24 24" width="24" height="24">
-                        <path class="check-path" d="M4 12.5L9.5 18L20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>完成这一步</span>
+                    <div class="btn-check-wrapper">
+                        <svg class="btn-check-icon" viewBox="0 0 32 32" width="28" height="28">
+                            <circle class="check-circle" cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <path class="check-path" d="M9 16.5L14 21.5L23 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div class="check-burst"></div>
+                    </div>
+                    <span class="btn-text">完成这一步</span>
+                    <div class="btn-shimmer"></div>
+                    <div class="btn-ripple-container"></div>
                 </button>
-                <div class="confetti-container" id="confettiContainer"></div>
+                <div class="celebration-container" id="celebrationContainer"></div>
             </div>
 
             <div class="focus-secondary-actions">

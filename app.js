@@ -307,7 +307,7 @@ class App {
         this.completeStepBtn = document.getElementById('completeStepBtn');
         this.skipStepBtn = document.getElementById('skipStepBtn');
         this.shelveTaskBtn = document.getElementById('shelveTaskBtn');
-        this.confettiContainer = document.getElementById('confettiContainer');
+        this.celebrationContainer = document.getElementById('celebrationContainer');
 
         // 创建任务弹窗
         this.createTaskModal = document.getElementById('createTaskModal');
@@ -842,70 +842,209 @@ class App {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // 创建庆祝粒子效果
-    createConfetti() {
-        if (!this.confettiContainer) return;
+    // ==================== 庆祝动画系统 ====================
 
-        const colors = [
-            '#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3',
-            '#f38181', '#aa96da', '#fcbad3', '#a8e6cf',
-            '#ffd93d', '#6bcb77', '#4d96ff', '#ff6f91'
+    // 创建烟花粒子效果
+    createCelebration() {
+        if (!this.celebrationContainer) return;
+
+        // 温暖的色彩系统 - 与设计系统协调
+        const colorPalettes = [
+            // 主渐变色系
+            ['#7c5cff', '#9d7eff', '#b8a4ff'],  // 紫罗兰
+            ['#ff7eb3', '#ff9ec5', '#ffbed7'],  // 粉红
+            ['#ffa07a', '#ffb899', '#ffd0b8'],  // 珊瑚
+            // 成功色系
+            ['#38ef7d', '#5ef193', '#84f5a9'],  // 翡翠绿
+            ['#11998e', '#3db3a8', '#69cdc2'],  // 青绿
+            // 点缀色
+            ['#ffe66d', '#ffec8a', '#fff2a7'],  // 金黄
+            ['#4ecdc4', '#72dbd4', '#96e9e4'],  // 蒂芙尼蓝
         ];
-        const shapes = ['', 'circle', 'star'];
-        const particleCount = 25;
+
+        const shapes = ['', 'glow', 'star', 'diamond'];
 
         // 获取按钮位置
         const buttonRect = this.completeStepBtn.getBoundingClientRect();
-        const startX = buttonRect.left + buttonRect.width / 2;
-        const startY = buttonRect.top;
+        const centerX = buttonRect.left + buttonRect.width / 2;
+        const centerY = buttonRect.top + buttonRect.height / 2;
+
+        // 创建中心光晕
+        this.createGlowEffect(centerX, centerY);
+
+        // 创建主烟花效果 - 从按钮向上喷射
+        this.createFireworkBurst(centerX, buttonRect.top, colorPalettes);
+
+        // 创建环绕粒子
+        this.createOrbitalSparks(centerX, centerY, colorPalettes);
+    }
+
+    // 创建中心光晕效果
+    createGlowEffect(x, y) {
+        const glow = document.createElement('div');
+        glow.className = 'celebration-glow';
+        glow.style.cssText = `
+            left: ${x - 60}px;
+            top: ${y - 60}px;
+            width: 120px;
+            height: 120px;
+            --glow-color: rgba(56, 239, 125, 0.5);
+        `;
+        this.celebrationContainer.appendChild(glow);
+        setTimeout(() => glow.remove(), 800);
+    }
+
+    // 创建烟花爆发效果
+    createFireworkBurst(x, y, palettes) {
+        const particleCount = 35;
 
         for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = `confetti-particle ${shapes[Math.floor(Math.random() * shapes.length)]}`;
+            const palette = palettes[Math.floor(Math.random() * palettes.length)];
+            const color = palette[Math.floor(Math.random() * palette.length)];
+            const shape = ['', 'glow', 'star', 'diamond'][Math.floor(Math.random() * 4)];
 
-            // 随机颜色
-            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            const particle = document.createElement('div');
+            particle.className = `spark ${shape}`;
 
             // 随机大小
-            const size = Math.random() * 8 + 6;
-            particle.style.width = `${size}px`;
-            particle.style.height = `${size}px`;
+            const size = 4 + Math.random() * 8;
 
-            // 起始位置（从按钮位置开始）
-            const offsetX = (Math.random() - 0.5) * 200;
-            particle.style.left = `${startX + offsetX}px`;
-            particle.style.bottom = `${window.innerHeight - startY}px`;
+            // 计算扇形分布角度 (向上的扇形，-30° 到 -150°)
+            const angle = (-30 - Math.random() * 120) * (Math.PI / 180);
+            const distance = 80 + Math.random() * 140;
+            const bx = Math.cos(angle) * distance;
+            const by = Math.sin(angle) * distance;
 
-            // 随机动画延迟
-            particle.style.animationDelay = `${Math.random() * 0.2}s`;
-            particle.style.animationDuration = `${1.2 + Math.random() * 0.6}s`;
+            particle.style.cssText = `
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background-color: ${color};
+                color: ${color};
+                --bx: ${bx}px;
+                --by: ${by}px;
+                animation: sparkBurst ${0.8 + Math.random() * 0.4}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                animation-delay: ${Math.random() * 0.15}s;
+            `;
 
-            this.confettiContainer.appendChild(particle);
+            this.celebrationContainer.appendChild(particle);
 
-            // 动画结束后移除粒子
-            setTimeout(() => {
-                particle.remove();
-            }, 2000);
+            // 创建拖尾效果
+            if (Math.random() > 0.6) {
+                this.createSparkTrail(x, y, bx, by, color, size * 0.6);
+            }
+
+            setTimeout(() => particle.remove(), 1500);
         }
     }
 
-    // 触发完成按钮动画
+    // 创建粒子拖尾
+    createSparkTrail(x, y, bx, by, color, size) {
+        for (let i = 1; i <= 3; i++) {
+            const trail = document.createElement('div');
+            trail.className = 'spark trail';
+            trail.style.cssText = `
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background-color: ${color};
+                --bx: ${bx * (0.3 + i * 0.2)}px;
+                --by: ${by * (0.3 + i * 0.2)}px;
+                animation: sparkBurst ${0.6 + Math.random() * 0.3}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                animation-delay: ${i * 0.05}s;
+                opacity: ${0.6 - i * 0.15};
+            `;
+            this.celebrationContainer.appendChild(trail);
+            setTimeout(() => trail.remove(), 1200);
+        }
+    }
+
+    // 创建环绕粒子效果
+    createOrbitalSparks(x, y, palettes) {
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+            const palette = palettes[Math.floor(Math.random() * palettes.length)];
+            const color = palette[0];
+
+            const spark = document.createElement('div');
+            spark.className = 'spark glow';
+
+            const angle = (i / count) * Math.PI * 2;
+            const radius = 30 + Math.random() * 20;
+            const endRadius = 60 + Math.random() * 40;
+
+            const startX = x + Math.cos(angle) * radius;
+            const startY = y + Math.sin(angle) * radius;
+            const endX = Math.cos(angle) * endRadius;
+            const endY = Math.sin(angle) * endRadius;
+
+            spark.style.cssText = `
+                left: ${startX}px;
+                top: ${startY}px;
+                width: 6px;
+                height: 6px;
+                background-color: ${color};
+                color: ${color};
+                --bx: ${endX}px;
+                --by: ${endY}px;
+                animation: sparkBurst 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                animation-delay: ${0.1 + i * 0.02}s;
+            `;
+
+            this.celebrationContainer.appendChild(spark);
+            setTimeout(() => spark.remove(), 1000);
+        }
+    }
+
+    // 创建涟漪效果
+    createRipple(x, y, container) {
+        const ripple = document.createElement('div');
+        ripple.className = 'btn-ripple';
+
+        const rect = container.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height) * 2;
+
+        ripple.style.cssText = `
+            left: ${x - rect.left - size / 2}px;
+            top: ${y - rect.top - size / 2}px;
+            width: ${size}px;
+            height: ${size}px;
+            animation: rippleExpand 0.6s ease-out forwards;
+        `;
+
+        container.querySelector('.btn-ripple-container').appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }
+
+    // 触发完成按钮庆祝动画
     triggerCompleteAnimation() {
-        // 添加点击动画类
-        this.completeStepBtn.classList.add('clicking');
+        // 添加庆祝动画类
+        this.completeStepBtn.classList.add('celebrating');
+
+        // 创建涟漪效果
+        const rect = this.completeStepBtn.getBoundingClientRect();
+        this.createRipple(rect.left + rect.width / 2, rect.top + rect.height / 2, this.completeStepBtn);
 
         // 触发庆祝粒子
-        this.createConfetti();
-
-        // 移除动画类
         setTimeout(() => {
-            this.completeStepBtn.classList.remove('clicking');
-            this.completeStepBtn.classList.add('success');
-        }, 500);
+            this.createCelebration();
+        }, 150);
 
+        // 添加成功发光状态
         setTimeout(() => {
-            this.completeStepBtn.classList.remove('success');
+            this.completeStepBtn.classList.add('success-glow');
+        }, 400);
+
+        // 清理动画类
+        setTimeout(() => {
+            this.completeStepBtn.classList.remove('celebrating');
         }, 800);
+
+        setTimeout(() => {
+            this.completeStepBtn.classList.remove('success-glow');
+        }, 1200);
     }
 
     // 格式化日期标签（今天、昨天、前天、X月X日）
