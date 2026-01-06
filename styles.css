@@ -1203,21 +1203,22 @@ body::before {
     will-change: transform, opacity;
     transform: translate(-50%, -50%);
     z-index: 10000;
+    line-height: 1;
 }
 
-/* 表情爆发动画 - 自然顺畅 */
+/* 表情爆发动画 - 立即弹出，自然消散 */
 @keyframes emojiBurst {
     0% {
         opacity: 1;
-        transform: translate(-50%, -50%) translate(0, 0) scale(0.3) rotate(0deg);
+        transform: translate(-50%, -50%) translate(0, 0) scale(0.5);
     }
-    30% {
+    15% {
         opacity: 1;
-        transform: translate(-50%, -50%) translate(var(--bx), var(--by)) scale(1.1) rotate(var(--rotate));
+        transform: translate(-50%, -50%) translate(calc(var(--bx) * 0.6), calc(var(--by) * 0.6)) scale(1);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, -50%) translate(calc(var(--bx) * 1.2), calc(var(--by) + 30px)) scale(0.6) rotate(calc(var(--rotate) * 2));
+        transform: translate(-50%, -50%) translate(var(--bx), calc(var(--by) + 20px)) scale(0.7) rotate(var(--rotate));
     }
 }
 

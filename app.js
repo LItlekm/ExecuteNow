@@ -862,7 +862,7 @@ class App {
 
     // 创建表情爆发效果
     createEmojiBurst(x, y, emojis) {
-        const particleCount = 12;
+        const particleCount = 10;
 
         for (let i = 0; i < particleCount; i++) {
             const emoji = emojis[Math.floor(Math.random() * emojis.length)];
@@ -871,14 +871,14 @@ class App {
             particle.className = 'emoji-particle';
             particle.textContent = emoji;
 
-            // 360度均匀分布
-            const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-            const distance = 80 + Math.random() * 60;
+            // 360度均匀分布，稍微随机化
+            const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+            const distance = 60 + Math.random() * 50;
             const bx = Math.cos(angle) * distance;
             const by = Math.sin(angle) * distance;
 
             // 随机大小
-            const size = 20 + Math.random() * 12;
+            const size = 18 + Math.random() * 10;
 
             particle.style.cssText = `
                 left: ${x}px;
@@ -886,13 +886,12 @@ class App {
                 font-size: ${size}px;
                 --bx: ${bx}px;
                 --by: ${by}px;
-                --rotate: ${(Math.random() - 0.5) * 60}deg;
-                animation: emojiBurst ${0.6 + Math.random() * 0.3}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                animation-delay: ${i * 0.03}s;
+                --rotate: ${(Math.random() - 0.5) * 40}deg;
+                animation: emojiBurst 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
             `;
 
             this.celebrationContainer.appendChild(particle);
-            setTimeout(() => particle.remove(), 1200);
+            setTimeout(() => particle.remove(), 800);
         }
     }
 
