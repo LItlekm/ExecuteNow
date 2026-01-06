@@ -844,157 +844,55 @@ class App {
 
     // ==================== 庆祝动画系统 ====================
 
-    // 创建烟花粒子效果
+    // 创建表情粒子效果
     createCelebration() {
         if (!this.celebrationContainer) return;
 
-        // 温暖的色彩系统 - 与设计系统协调
-        const colorPalettes = [
-            // 主渐变色系
-            ['#7c5cff', '#9d7eff', '#b8a4ff'],  // 紫罗兰
-            ['#ff7eb3', '#ff9ec5', '#ffbed7'],  // 粉红
-            ['#ffa07a', '#ffb899', '#ffd0b8'],  // 珊瑚
-            // 成功色系
-            ['#38ef7d', '#5ef193', '#84f5a9'],  // 翡翠绿
-            ['#11998e', '#3db3a8', '#69cdc2'],  // 青绿
-            // 点缀色
-            ['#ffe66d', '#ffec8a', '#fff2a7'],  // 金黄
-            ['#4ecdc4', '#72dbd4', '#96e9e4'],  // 蒂芙尼蓝
-        ];
-
-        const shapes = ['', 'glow', 'star', 'diamond'];
+        // 庆祝表情池
+        const emojis = ['😆', '🤩', '🥳', '🎉', '✨', '💫', '⭐', '🌟', '💪', '👏'];
 
         // 获取按钮位置
         const buttonRect = this.completeStepBtn.getBoundingClientRect();
         const centerX = buttonRect.left + buttonRect.width / 2;
         const centerY = buttonRect.top + buttonRect.height / 2;
 
-        // 创建中心光晕
-        this.createGlowEffect(centerX, centerY);
-
-        // 创建主烟花效果 - 从按钮向上喷射
-        this.createFireworkBurst(centerX, buttonRect.top, colorPalettes);
-
-        // 创建环绕粒子
-        this.createOrbitalSparks(centerX, centerY, colorPalettes);
+        // 创建表情粒子 - 360度发射
+        this.createEmojiBurst(centerX, centerY, emojis);
     }
 
-    // 创建中心光晕效果
-    createGlowEffect(x, y) {
-        const glow = document.createElement('div');
-        glow.className = 'celebration-glow';
-        glow.style.cssText = `
-            left: ${x - 60}px;
-            top: ${y - 60}px;
-            width: 120px;
-            height: 120px;
-            --glow-color: rgba(56, 239, 125, 0.5);
-        `;
-        this.celebrationContainer.appendChild(glow);
-        setTimeout(() => glow.remove(), 800);
-    }
-
-    // 创建烟花爆发效果
-    createFireworkBurst(x, y, palettes) {
-        const particleCount = 35;
+    // 创建表情爆发效果
+    createEmojiBurst(x, y, emojis) {
+        const particleCount = 12;
 
         for (let i = 0; i < particleCount; i++) {
-            const palette = palettes[Math.floor(Math.random() * palettes.length)];
-            const color = palette[Math.floor(Math.random() * palette.length)];
-            const shape = ['', 'glow', 'star', 'diamond'][Math.floor(Math.random() * 4)];
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
 
             const particle = document.createElement('div');
-            particle.className = `spark ${shape}`;
+            particle.className = 'emoji-particle';
+            particle.textContent = emoji;
 
-            // 随机大小
-            const size = 4 + Math.random() * 8;
-
-            // 计算扇形分布角度 (向上的扇形，-30° 到 -150°)
-            const angle = (-30 - Math.random() * 120) * (Math.PI / 180);
-            const distance = 80 + Math.random() * 140;
+            // 360度均匀分布
+            const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+            const distance = 80 + Math.random() * 60;
             const bx = Math.cos(angle) * distance;
             const by = Math.sin(angle) * distance;
+
+            // 随机大小
+            const size = 20 + Math.random() * 12;
 
             particle.style.cssText = `
                 left: ${x}px;
                 top: ${y}px;
-                width: ${size}px;
-                height: ${size}px;
-                background-color: ${color};
-                color: ${color};
+                font-size: ${size}px;
                 --bx: ${bx}px;
                 --by: ${by}px;
-                animation: sparkBurst ${0.8 + Math.random() * 0.4}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                animation-delay: ${Math.random() * 0.15}s;
+                --rotate: ${(Math.random() - 0.5) * 60}deg;
+                animation: emojiBurst ${0.6 + Math.random() * 0.3}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                animation-delay: ${i * 0.03}s;
             `;
 
             this.celebrationContainer.appendChild(particle);
-
-            // 创建拖尾效果
-            if (Math.random() > 0.6) {
-                this.createSparkTrail(x, y, bx, by, color, size * 0.6);
-            }
-
-            setTimeout(() => particle.remove(), 1500);
-        }
-    }
-
-    // 创建粒子拖尾
-    createSparkTrail(x, y, bx, by, color, size) {
-        for (let i = 1; i <= 3; i++) {
-            const trail = document.createElement('div');
-            trail.className = 'spark trail';
-            trail.style.cssText = `
-                left: ${x}px;
-                top: ${y}px;
-                width: ${size}px;
-                height: ${size}px;
-                background-color: ${color};
-                --bx: ${bx * (0.3 + i * 0.2)}px;
-                --by: ${by * (0.3 + i * 0.2)}px;
-                animation: sparkBurst ${0.6 + Math.random() * 0.3}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                animation-delay: ${i * 0.05}s;
-                opacity: ${0.6 - i * 0.15};
-            `;
-            this.celebrationContainer.appendChild(trail);
-            setTimeout(() => trail.remove(), 1200);
-        }
-    }
-
-    // 创建环绕粒子效果
-    createOrbitalSparks(x, y, palettes) {
-        const count = 12;
-        for (let i = 0; i < count; i++) {
-            const palette = palettes[Math.floor(Math.random() * palettes.length)];
-            const color = palette[0];
-
-            const spark = document.createElement('div');
-            spark.className = 'spark glow';
-
-            const angle = (i / count) * Math.PI * 2;
-            const radius = 30 + Math.random() * 20;
-            const endRadius = 60 + Math.random() * 40;
-
-            const startX = x + Math.cos(angle) * radius;
-            const startY = y + Math.sin(angle) * radius;
-            const endX = Math.cos(angle) * endRadius;
-            const endY = Math.sin(angle) * endRadius;
-
-            spark.style.cssText = `
-                left: ${startX}px;
-                top: ${startY}px;
-                width: 6px;
-                height: 6px;
-                background-color: ${color};
-                color: ${color};
-                --bx: ${endX}px;
-                --by: ${endY}px;
-                animation: sparkBurst 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                animation-delay: ${0.1 + i * 0.02}s;
-            `;
-
-            this.celebrationContainer.appendChild(spark);
-            setTimeout(() => spark.remove(), 1000);
+            setTimeout(() => particle.remove(), 1200);
         }
     }
 
@@ -1023,38 +921,25 @@ class App {
 
     // 触发完成按钮庆祝动画
     triggerCompleteAnimation() {
-        // 第一步：先隐藏勾选（准备动画）
-        this.completeStepBtn.classList.add('prepare-animate');
-
-        // 强制重绘，确保隐藏状态生效
-        void this.completeStepBtn.offsetWidth;
-
-        // 第二步：移除准备状态，添加庆祝动画类
-        this.completeStepBtn.classList.remove('prepare-animate');
+        // 添加庆祝动画类 - 触发勾选图标弹出
         this.completeStepBtn.classList.add('celebrating');
 
-        // 创建涟漪效果
-        const rect = this.completeStepBtn.getBoundingClientRect();
-        this.createRipple(rect.left + rect.width / 2, rect.top + rect.height / 2, this.completeStepBtn);
-
-        // 触发庆祝粒子
-        setTimeout(() => {
-            this.createCelebration();
-        }, 150);
+        // 同时触发表情粒子
+        this.createCelebration();
 
         // 添加成功发光状态
         setTimeout(() => {
             this.completeStepBtn.classList.add('success-glow');
-        }, 400);
+        }, 300);
 
         // 清理动画类
         setTimeout(() => {
             this.completeStepBtn.classList.remove('celebrating');
-        }, 800);
+        }, 600);
 
         setTimeout(() => {
             this.completeStepBtn.classList.remove('success-glow');
-        }, 1200);
+        }, 1000);
     }
 
     // 格式化日期标签（今天、昨天、前天、X月X日）

@@ -1021,28 +1021,43 @@ body::before {
 .btn-check-icon {
     position: relative;
     z-index: 2;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    /* 默认隐藏，等待动画触发 */
+    opacity: 0;
+    transform: scale(0);
+    transition: none;
 }
 
-/* 圆圈轨道 */
+/* 勾选图标显示状态 */
+.btn-complete.celebrating .btn-check-icon {
+    animation: checkIconPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes checkIconPop {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-45deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.3) rotate(10deg);
+    }
+    75% {
+        transform: scale(0.9) rotate(-5deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* 圆圈轨道 - 简化 */
 .btn-check-icon .check-circle {
-    stroke-dasharray: 88;
-    stroke-dashoffset: 88;
-    opacity: 0.4;
-    transition: all 0.3s ease;
+    opacity: 0.5;
 }
 
 /* 勾选路径 */
 .btn-check-icon .check-path {
-    stroke-dasharray: 28;
-    stroke-dashoffset: 0;
-    filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
-    transition: none;
-}
-
-/* 准备动画状态 - 先隐藏勾选 */
-.btn-complete.prepare-animate .check-path {
-    stroke-dashoffset: 28;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
 }
 
 /* 光爆效果元素 */
@@ -1097,67 +1112,15 @@ body::before {
 
 /* ===== 点击动画状态 ===== */
 
-/* 按钮按下效果 */
+/* 按钮按下效果 - 简化为自然的弹性 */
 .btn-complete.celebrating {
-    animation: btnCelebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: btnCelebrate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes btnCelebrate {
     0% { transform: scale(1); }
-    15% { transform: scale(0.92); }
-    30% { transform: scale(1.08); }
-    45% { transform: scale(0.98); }
-    60% { transform: scale(1.02); }
+    40% { transform: scale(0.95); }
     100% { transform: scale(1); }
-}
-
-/* 圆圈绘制动画 */
-.btn-complete.celebrating .check-circle {
-    animation: circleReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 1;
-}
-
-@keyframes circleReveal {
-    0% {
-        stroke-dashoffset: 88;
-        stroke: rgba(255,255,255,0.6);
-    }
-    100% {
-        stroke-dashoffset: 0;
-        stroke: rgba(255,255,255,0.9);
-    }
-}
-
-/* 勾选绘制动画 */
-.btn-complete.celebrating .check-path {
-    animation: checkReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
-}
-
-@keyframes checkReveal {
-    0% {
-        stroke-dashoffset: 28;
-        stroke-width: 2.5;
-    }
-    50% {
-        stroke-width: 3.5;
-    }
-    100% {
-        stroke-dashoffset: 0;
-        stroke-width: 2.5;
-    }
-}
-
-/* 图标容器弹跳 */
-.btn-complete.celebrating .btn-check-wrapper {
-    animation: wrapperBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes wrapperBounce {
-    0% { transform: scale(1) rotate(0deg); }
-    25% { transform: scale(0.7) rotate(-10deg); }
-    50% { transform: scale(1.3) rotate(5deg); }
-    75% { transform: scale(0.95) rotate(-2deg); }
-    100% { transform: scale(1) rotate(0deg); }
 }
 
 /* 光爆效果 */
@@ -1233,105 +1196,28 @@ body::before {
     z-index: 9999;
 }
 
-/* 烟花粒子 */
-.spark {
+/* 表情粒子样式 */
+.emoji-particle {
     position: absolute;
-    border-radius: 50%;
     pointer-events: none;
     will-change: transform, opacity;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
 }
 
-/* 主粒子 - 发光效果 */
-.spark.glow {
-    box-shadow: 0 0 6px 2px currentColor;
-}
-
-/* 拖尾粒子 */
-.spark.trail {
-    opacity: 0.6;
-}
-
-/* 星星粒子 */
-.spark.star {
-    border-radius: 0;
-    clip-path: polygon(
-        50% 0%, 61% 35%, 98% 35%, 68% 57%,
-        79% 91%, 50% 70%, 21% 91%, 32% 57%,
-        2% 35%, 39% 35%
-    );
-}
-
-/* 心形粒子 */
-.spark.heart {
-    border-radius: 0;
-    clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
-    transform-origin: center;
-}
-
-/* 菱形粒子 */
-.spark.diamond {
-    border-radius: 0;
-    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-}
-
-/* 粒子上升动画 */
-@keyframes sparkRise {
+/* 表情爆发动画 - 自然顺畅 */
+@keyframes emojiBurst {
     0% {
         opacity: 1;
-        transform: translateY(0) translateX(var(--tx, 0)) scale(1) rotate(0deg);
+        transform: translate(-50%, -50%) translate(0, 0) scale(0.3) rotate(0deg);
     }
-    50% {
+    30% {
         opacity: 1;
-        transform: translateY(var(--rise, -180px)) translateX(var(--drift, 0)) scale(1.2) rotate(180deg);
+        transform: translate(-50%, -50%) translate(var(--bx), var(--by)) scale(1.1) rotate(var(--rotate));
     }
     100% {
         opacity: 0;
-        transform: translateY(var(--fall, -100px)) translateX(var(--drift2, 0)) scale(0.3) rotate(360deg);
-    }
-}
-
-/* 粒子爆炸扩散动画 */
-@keyframes sparkBurst {
-    0% {
-        opacity: 1;
-        transform: translate(0, 0) scale(0.5);
-    }
-    20% {
-        opacity: 1;
-        transform: translate(var(--bx, 0), var(--by, 0)) scale(1.3);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(calc(var(--bx, 0) * 1.5), calc(var(--by, 0) + 60px)) scale(0.2);
-    }
-}
-
-/* 闪烁动画 */
-@keyframes sparkle {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-/* 光晕效果 */
-.celebration-glow {
-    position: absolute;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--glow-color, rgba(255,126,179,0.4)) 0%, transparent 70%);
-    animation: glowPulse 0.8s ease-out forwards;
-    pointer-events: none;
-}
-
-@keyframes glowPulse {
-    0% {
-        opacity: 0.8;
-        transform: scale(0);
-    }
-    50% {
-        opacity: 0.6;
-    }
-    100% {
-        opacity: 0;
-        transform: scale(3);
+        transform: translate(-50%, -50%) translate(calc(var(--bx) * 1.2), calc(var(--by) + 30px)) scale(0.6) rotate(calc(var(--rotate) * 2));
     }
 }
 
