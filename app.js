@@ -307,6 +307,7 @@ class App {
         this.completeStepBtn = document.getElementById('completeStepBtn');
         this.skipStepBtn = document.getElementById('skipStepBtn');
         this.shelveTaskBtn = document.getElementById('shelveTaskBtn');
+        this.confettiContainer = document.getElementById('confettiContainer');
 
         // 创建任务弹窗
         this.createTaskModal = document.getElementById('createTaskModal');
@@ -752,6 +753,9 @@ class App {
             this.focusStepCard.classList.remove('completing');
         }, 500);
 
+        // 触发按钮庆祝动画
+        this.triggerCompleteAnimation();
+
         // 震动反馈
         if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
             navigator.vibrate(50);
@@ -836,6 +840,72 @@ class App {
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // 创建庆祝粒子效果
+    createConfetti() {
+        if (!this.confettiContainer) return;
+
+        const colors = [
+            '#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3',
+            '#f38181', '#aa96da', '#fcbad3', '#a8e6cf',
+            '#ffd93d', '#6bcb77', '#4d96ff', '#ff6f91'
+        ];
+        const shapes = ['', 'circle', 'star'];
+        const particleCount = 25;
+
+        // 获取按钮位置
+        const buttonRect = this.completeStepBtn.getBoundingClientRect();
+        const startX = buttonRect.left + buttonRect.width / 2;
+        const startY = buttonRect.top;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = `confetti-particle ${shapes[Math.floor(Math.random() * shapes.length)]}`;
+
+            // 随机颜色
+            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // 随机大小
+            const size = Math.random() * 8 + 6;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+
+            // 起始位置（从按钮位置开始）
+            const offsetX = (Math.random() - 0.5) * 200;
+            particle.style.left = `${startX + offsetX}px`;
+            particle.style.bottom = `${window.innerHeight - startY}px`;
+
+            // 随机动画延迟
+            particle.style.animationDelay = `${Math.random() * 0.2}s`;
+            particle.style.animationDuration = `${1.2 + Math.random() * 0.6}s`;
+
+            this.confettiContainer.appendChild(particle);
+
+            // 动画结束后移除粒子
+            setTimeout(() => {
+                particle.remove();
+            }, 2000);
+        }
+    }
+
+    // 触发完成按钮动画
+    triggerCompleteAnimation() {
+        // 添加点击动画类
+        this.completeStepBtn.classList.add('clicking');
+
+        // 触发庆祝粒子
+        this.createConfetti();
+
+        // 移除动画类
+        setTimeout(() => {
+            this.completeStepBtn.classList.remove('clicking');
+            this.completeStepBtn.classList.add('success');
+        }, 500);
+
+        setTimeout(() => {
+            this.completeStepBtn.classList.remove('success');
+        }, 800);
     }
 
     // 格式化日期标签（今天、昨天、前天、X月X日）

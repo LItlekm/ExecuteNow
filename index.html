@@ -100,9 +100,12 @@
             <!-- 操作按钮 -->
             <div class="focus-actions">
                 <button id="completeStepBtn" class="btn btn-complete">
-                    <span class="btn-icon">✓</span>
+                    <svg class="btn-check-icon" viewBox="0 0 24 24" width="24" height="24">
+                        <path class="check-path" d="M4 12.5L9.5 18L20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                     <span>完成这一步</span>
                 </button>
+                <div class="confetti-container" id="confettiContainer"></div>
             </div>
 
             <div class="focus-secondary-actions">
