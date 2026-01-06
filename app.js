@@ -1000,6 +1000,9 @@ class App {
 
     // 创建涟漪效果
     createRipple(x, y, container) {
+        const rippleContainer = container.querySelector('.btn-ripple-container');
+        if (!rippleContainer) return;
+
         const ripple = document.createElement('div');
         ripple.className = 'btn-ripple';
 
@@ -1014,7 +1017,7 @@ class App {
             animation: rippleExpand 0.6s ease-out forwards;
         `;
 
-        container.querySelector('.btn-ripple-container').appendChild(ripple);
+        rippleContainer.appendChild(ripple);
         setTimeout(() => ripple.remove(), 600);
     }
 
