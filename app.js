@@ -133,6 +133,7 @@ class TaskManager {
 
         task.status = 'shelved';
         task.shelveReason = reason || '';
+        task.shelvedAt = Date.now();
         this.saveToStorage();
         return task;
     }
@@ -530,13 +531,8 @@ class App {
             'shelved': '⏸️'
         };
 
-        const statusTexts = {
-            'in_progress': '进行中',
-            'completed': '已完成',
-            'shelved': '已搁置'
-        };
-
-        this.taskList.innerHTML = tasks.map(task => {
+        // 渲染单个任务卡片的辅助函数
+        const renderTaskCard = (task) => {
             const progress = this.taskManager.getProgress(task);
             const completedSteps = task.steps.filter(s => s.completed || s.skipped).length;
 
@@ -570,7 +566,48 @@ class App {
                     </div>
                 </div>
             `;
-        }).join('');
+        };
+
+        // 分离任务：进行中 vs 已完成/已搁置
+        const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
+        const finishedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'shelved');
+
+        // 按日期分组已完成/已搁置的任务
+        const groupedByDate = {};
+        finishedTasks.forEach(task => {
+            const endTime = this.getTaskEndTime(task);
+            const dateKey = this.getDateKey(endTime);
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = {
+                    timestamp: endTime,
+                    tasks: []
+                };
+            }
+            groupedByDate[dateKey].tasks.push(task);
+        });
+
+        // 按日期倒序排列（最近的在前）
+        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+
+        // 构建完整的 HTML
+        let html = '';
+
+        // 1. 渲染进行中的任务（置顶）
+        html += inProgressTasks.map(renderTaskCard).join('');
+
+        // 2. 渲染已完成/已搁置的任务（按日期分组）
+        sortedDateKeys.forEach(dateKey => {
+            const group = groupedByDate[dateKey];
+            const dateLabel = this.formatDateLabel(group.timestamp);
+
+            // 添加日期分隔符
+            html += `<div class="date-separator">${dateLabel}</div>`;
+
+            // 渲染该日期下的所有任务
+            html += group.tasks.map(renderTaskCard).join('');
+        });
+
+        this.taskList.innerHTML = html;
 
         // 绑定任务卡片事件
         this.taskList.querySelectorAll('.task-card').forEach(card => {
@@ -796,6 +833,47 @@ class App {
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // 格式化日期标签（今天、昨天、前天、X月X日）
+    formatDateLabel(timestamp) {
+        const date = new Date(timestamp);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dayBeforeYesterday = new Date(today);
+        dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+
+        const isSameDay = (d1, d2) =>
+            d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
+
+        if (isSameDay(date, today)) return '今天';
+        if (isSameDay(date, yesterday)) return '昨天';
+        if (isSameDay(date, dayBeforeYesterday)) return '前天';
+
+        if (date.getFullYear() === today.getFullYear()) {
+            return `${date.getMonth() + 1}月${date.getDate()}日`;
+        }
+        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    // 生成日期分组键
+    getDateKey(timestamp) {
+        const date = new Date(timestamp);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    // 获取任务结束时间（用于日期分组）
+    getTaskEndTime(task) {
+        if (task.status === 'completed' && task.completedAt) {
+            return task.completedAt;
+        }
+        if (task.status === 'shelved' && task.shelvedAt) {
+            return task.shelvedAt;
+        }
+        return task.createdAt || parseInt(task.id);
     }
 
     // ==================== 创建任务弹窗 ====================

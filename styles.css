@@ -291,6 +291,32 @@ body {
     gap: var(--spacing-sm);
 }
 
+/* 日期分隔符 */
+.date-separator {
+    display: flex;
+    align-items: center;
+    margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.date-separator::before,
+.date-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.date-separator::before {
+    margin-right: var(--spacing-sm);
+}
+
+.date-separator::after {
+    margin-left: var(--spacing-sm);
+}
+
 /* 任务卡片 */
 .task-card {
     display: flex;
