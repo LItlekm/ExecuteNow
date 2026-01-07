@@ -2166,6 +2166,41 @@ class App {
 
     // ==================== 挑战系统 ====================
 
+    setChallengeCategoryDisplay(text) {
+        const displayText = (text || '').trim() || '全部';
+        this.challengeCategorySelect.innerHTML = `<option value="${displayText}">${displayText}</option>`;
+        this.challengeCategorySelect.value = displayText;
+        this.challengeCategorySelect.disabled = true;
+    }
+
+    updateChallengeCategoryDisplay() {
+        const mode = this.selectedMatchMode || 'all';
+
+        if (mode === 'all') {
+            this.setChallengeCategoryDisplay('全部');
+            return;
+        }
+
+        if (mode === 'category') {
+            const categories = this.getSelectedMatchCategories();
+            this.setChallengeCategoryDisplay(categories.length ? categories.join('、') : '全部');
+            return;
+        }
+
+        if (mode === 'specific') {
+            const selectedTemplateId = (this.selectedMatchTemplateIds || [])[0];
+            const template = selectedTemplateId ? this.getTemplateById(selectedTemplateId) : null;
+            this.setChallengeCategoryDisplay(template?.category || '全部');
+        }
+    }
+
+    getTemplateById(templateId) {
+        const presetTemplates = typeof TASK_TEMPLATES !== 'undefined' ? TASK_TEMPLATES : [];
+        const customTemplates = this.customTemplateManager ? this.customTemplateManager.getAll() : [];
+        const allTemplates = [...presetTemplates, ...customTemplates];
+        return allTemplates.find(t => t.id === templateId) || null;
+    }
+
     renderChallengeUnitSelectors() {
         const prevTypeUnit = this.challengeTypeUnitSelect.value || 'tasks';
         const prevCountUnit = this.challengeCountUnitSelect.value || 'times';
@@ -2185,6 +2220,7 @@ class App {
 
     initChallengeUI() {
         this.renderChallengeUnitSelectors();
+        this.setChallengeCategoryDisplay('全部');
 
         // 初始化图标选择器
         const icons = ['🎯', '📚', '💪', '🏃', '📖', '💻', '🎨', '🎵', '🌅', '💤', '🍎', '💧', '🧘', '✍️', '📝', '✅'];
@@ -2242,8 +2278,13 @@ class App {
                 const countUnit = this.selectedTemplate.countUnit || (this.selectedTemplate.unit === 'minutes' ? 'minutes' : 'times');
                 this.challengeTypeUnitSelect.value = typeUnit;
                 this.challengeCountUnitSelect.value = countUnit;
+                // 重置关联配置为“全部任务”
+                this.selectedMatchMode = 'all';
+                this.selectedMatchCategories = [];
+                this.selectedMatchTemplateIds = [];
+                this.matchModeSelector.querySelector('input[value="all"]').checked = true;
+                this.onMatchModeChange('all');
                 this.onChallengeUnitChange();
-                this.challengeCategorySelect.value = this.selectedTemplate.category;
                 this.selectedChallengeIcon = this.selectedTemplate.icon;
                 this.selectedChallengeColor = this.selectedTemplate.color;
                 // 更新图标和颜色选择
@@ -2290,7 +2331,7 @@ class App {
                         <div class="challenge-info">
                             <div class="challenge-name">${c.name}</div>
                             <div class="challenge-meta">
-                                <span class="challenge-category">${c.category}</span>
+                                <span class="challenge-category">${(c.matchMode === 'specific') ? `${c.category} · 模板` : (c.matchMode === 'category') ? `${c.category} · 分类` : '全部'}</span>
                                 ${c.streak > 0 ? `<span class="challenge-streak">🔥 ${c.streak}天</span>` : ''}
                             </div>
                         </div>
@@ -2352,6 +2393,7 @@ class App {
         this.challengeColorGrid.querySelector('[data-color="#7c5cff"]')?.click();
 
         // 重置关联配置UI
+        this.onMatchModeChange('all');
         this.onChallengeUnitChange();
         this.matchModeSelector.querySelectorAll('.match-mode-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.mode === 'all');
@@ -2398,8 +2440,14 @@ class App {
                 matchConfig.matchCategories = this.getSelectedMatchCategories();
             } else if (this.selectedMatchMode === 'specific') {
                 matchConfig.matchTemplateIds = this.getSelectedMatchTemplateIds();
+                if (!matchConfig.matchTemplateIds.length) {
+                    alert('请选择一个模板');
+                    return;
+                }
             }
         }
+
+        this.updateChallengeCategoryDisplay();
 
         const challenge = this.challengeManager.createChallenge({
             type: this.selectedChallengeType,
@@ -2428,6 +2476,7 @@ class App {
             // 渲染分类和模板列表
             this.renderMatchCategoryGrid();
             this.renderMatchTemplateList();
+            this.updateChallengeCategoryDisplay();
         } else {
             // 重置为全局匹配
             this.selectedMatchMode = 'all';
@@ -2447,6 +2496,8 @@ class App {
 
         this.matchCategoriesPanel.style.display = mode === 'category' ? 'block' : 'none';
         this.matchTemplatesPanel.style.display = mode === 'specific' ? 'block' : 'none';
+
+        this.updateChallengeCategoryDisplay();
     }
 
     // 渲染分类多选网格
@@ -2465,6 +2516,7 @@ class App {
                 this.selectedMatchCategories = Array.from(
                     this.matchCategoryGrid.querySelectorAll('input:checked')
                 ).map(el => el.value);
+                this.updateChallengeCategoryDisplay();
             });
         });
     }
@@ -2478,7 +2530,7 @@ class App {
 
         this.matchTemplateList.innerHTML = allTemplates.map(t => `
             <label class="template-checkbox-item">
-                <input type="checkbox" data-id="${t.id}" ${this.selectedMatchTemplateIds.includes(t.id) ? 'checked' : ''}>
+                <input type="radio" name="matchTemplateRadio" data-id="${t.id}" ${this.selectedMatchTemplateIds[0] === t.id ? 'checked' : ''}>
                 <span class="template-icon">${t.icon || '📋'}</span>
                 <span class="template-name">${t.name}</span>
                 <span class="template-category">${t.category || ''}</span>
@@ -2486,11 +2538,10 @@ class App {
         `).join('');
 
         // 绑定事件
-        this.matchTemplateList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        this.matchTemplateList.querySelectorAll('input[type="radio"]').forEach(cb => {
             cb.addEventListener('change', () => {
-                this.selectedMatchTemplateIds = Array.from(
-                    this.matchTemplateList.querySelectorAll('input:checked')
-                ).map(el => el.dataset.id);
+                this.selectedMatchTemplateIds = [cb.dataset.id];
+                this.updateChallengeCategoryDisplay();
             });
         });
     }
@@ -2504,9 +2555,7 @@ class App {
 
     // 获取选中的模板ID
     getSelectedMatchTemplateIds() {
-        return Array.from(
-            this.matchTemplateList.querySelectorAll('input:checked')
-        ).map(el => el.dataset.id);
+        return this.selectedMatchTemplateIds || [];
     }
 
     // ==================== 日历视图 ====================
