@@ -157,7 +157,12 @@ class ChallengeManager {
             color: config.color || '#7c5cff',
             reminders: config.reminders || [],
             lastReset: this.getDateKey(),
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            // 任务关联字段
+            matchMode: config.matchMode || 'all', // all, category, specific
+            matchCategories: config.matchCategories || [], // category模式：匹配的分类列表
+            matchTaskIds: config.matchTaskIds || [], // specific模式：匹配的任务ID
+            matchTemplateIds: config.matchTemplateIds || [] // specific模式：匹配的模板ID
         };
 
         this.data.active.push(challenge);
@@ -168,6 +173,54 @@ class ChallengeManager {
         this._checkCreateAchievement();
 
         return challenge;
+    }
+
+    // 检查任务是否匹配挑战条件
+    matchesTask(challenge, task) {
+        // 单位不匹配直接返回 false
+        if (challenge.unit !== 'tasks' && challenge.unit !== 'steps') {
+            return false;
+        }
+
+        const matchMode = challenge.matchMode || 'all';
+
+        switch (matchMode) {
+            case 'all':
+                // 全局匹配：所有任务都匹配
+                return true;
+
+            case 'category':
+                // 分类匹配
+                if (!challenge.matchCategories || challenge.matchCategories.length === 0) {
+                    return true; // 空数组视为匹配所有
+                }
+                return task.category && challenge.matchCategories.includes(task.category);
+
+            case 'specific':
+                // 特定任务匹配
+                const matchTaskIds = challenge.matchTaskIds || [];
+                const matchTemplateIds = challenge.matchTemplateIds || [];
+
+                if (matchTaskIds.length === 0 && matchTemplateIds.length === 0) {
+                    return true; // 空配置视为匹配所有
+                }
+
+                // 检查任务ID或模板ID
+                if (matchTaskIds.includes(task.id)) return true;
+                if (task.templateId && matchTemplateIds.includes(task.templateId)) return true;
+
+                return false;
+
+            default:
+                return true;
+        }
+    }
+
+    // 获取匹配指定任务的挑战列表
+    getMatchingChallenges(task, unit) {
+        return this.data.active.filter(c =>
+            c.unit === unit && this.matchesTask(c, task)
+        );
     }
 
     // 更新挑战进度
@@ -248,7 +301,7 @@ class ChallengeManager {
         }
 
         // 只允许更新部分字段
-        const allowedFields = ['name', 'target', 'icon', 'color', 'reminders', 'endDate'];
+        const allowedFields = ['name', 'target', 'icon', 'color', 'reminders', 'endDate', 'matchMode', 'matchCategories', 'matchTaskIds', 'matchTemplateIds'];
         allowedFields.forEach(field => {
             if (updates[field] !== undefined) {
                 challenge[field] = updates[field];

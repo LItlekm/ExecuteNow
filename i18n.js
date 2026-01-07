@@ -152,6 +152,17 @@ const TRANSLATIONS = {
         cancel: '取消',
         confirm: '创建挑战',
 
+        // 挑战任务关联
+        challenge_task_match: '任务关联',
+        challenge_match_all: '全部任务',
+        challenge_match_all_desc: '所有任务都计入此挑战',
+        challenge_match_category: '按分类',
+        challenge_match_category_desc: '只有指定分类的任务计入',
+        challenge_match_specific: '指定模板',
+        challenge_match_specific_desc: '只有选中的模板任务计入',
+        select_categories: '选择分类（可多选）',
+        select_templates: '选择模板',
+
         // 日历视图
         calendar_title: '连续记录',
         calendar_legend_low: '低活跃',
@@ -405,6 +416,17 @@ const TRANSLATIONS = {
         reset_period_hint: 'Reset challenge every N days',
         cancel: 'Cancel',
         confirm: 'Create',
+
+        // Challenge Task Matching
+        challenge_task_match: 'Task Matching',
+        challenge_match_all: 'All Tasks',
+        challenge_match_all_desc: 'All tasks count towards this challenge',
+        challenge_match_category: 'By Category',
+        challenge_match_category_desc: 'Only tasks in selected categories count',
+        challenge_match_specific: 'Specific Templates',
+        challenge_match_specific_desc: 'Only tasks from selected templates count',
+        select_categories: 'Select Categories (multiple)',
+        select_templates: 'Select Templates',
 
         // Calendar View
         calendar_title: 'Activity Calendar',

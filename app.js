@@ -22,7 +22,7 @@ class TaskManager {
     }
 
     // 创建任务
-    createTask(name, steps, coachId) {
+    createTask(name, steps, coachId, options = {}) {
         const task = {
             id: generateId(),
             name: name.trim(),
@@ -37,6 +37,8 @@ class TaskManager {
             status: 'in_progress', // in_progress, completed, shelved
             shelveReason: '',
             coachId: coachId,
+            category: options.category || null,  // 任务分类（从模板继承）
+            templateId: options.templateId || null,  // 来源模板ID
             createdAt: Date.now(),
             completedAt: null
         };
@@ -343,6 +345,14 @@ class App {
         this.customPeriodGroup = document.getElementById('customPeriodGroup');
         this.challengePeriodInput = document.getElementById('challengePeriodInput');
 
+        // 任务关联配置
+        this.taskMatchGroup = document.getElementById('taskMatchGroup');
+        this.matchModeSelector = document.getElementById('matchModeSelector');
+        this.matchCategoriesPanel = document.getElementById('matchCategoriesPanel');
+        this.matchCategoryGrid = document.getElementById('matchCategoryGrid');
+        this.matchTemplatesPanel = document.getElementById('matchTemplatesPanel');
+        this.matchTemplateList = document.getElementById('matchTemplateList');
+
         // 日历弹窗
         this.calendarModal = document.getElementById('calendarModal');
         this.closeCalendarModal = document.getElementById('closeCalendarModal');
@@ -584,6 +594,14 @@ class App {
         // 挑战类型选择
         this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
             btn.addEventListener('click', () => this.selectChallengeType(btn.dataset.type));
+        });
+
+        // 挑战单位变化事件
+        this.challengeUnitSelect.addEventListener('change', () => this.onChallengeUnitChange());
+
+        // 关联模式选择事件
+        this.matchModeSelector.querySelectorAll('input[name="matchMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => this.onMatchModeChange(e.target.value));
         });
 
         // 日历弹窗
@@ -970,8 +988,8 @@ class App {
             timeSpent: stepTime
         });
 
-        // 更新挑战进度（步骤类型）
-        const stepChallenges = this.challengeManager.getActiveChallenges().filter(c => c.unit === 'steps');
+        // 更新挑战进度（步骤类型）- 使用匹配逻辑
+        const stepChallenges = this.challengeManager.getMatchingChallenges(this.currentTask, 'steps');
         stepChallenges.forEach(c => {
             this.challengeManager.updateProgress(c.id, 1);
         });
@@ -986,8 +1004,8 @@ class App {
                 timeSpent: 0
             });
 
-            // 更新任务类型挑战
-            const taskChallenges = this.challengeManager.getActiveChallenges().filter(c => c.unit === 'tasks');
+            // 更新任务类型挑战 - 使用匹配逻辑
+            const taskChallenges = this.challengeManager.getMatchingChallenges(task, 'tasks');
             taskChallenges.forEach(c => {
                 this.challengeManager.updateProgress(c.id, 1);
             });
@@ -1451,7 +1469,11 @@ class App {
         const task = this.taskManager.createTask(
             this.selectedTemplate.name,
             this.selectedTemplate.steps,
-            this.previewSelectedCoachId
+            this.previewSelectedCoachId,
+            {
+                category: this.selectedTemplate.category || null,
+                templateId: this.selectedTemplate.id || null
+            }
         );
 
         this.hideTemplatePreviewModal();
@@ -2271,6 +2293,11 @@ class App {
         this.selectedChallengeIcon = '🎯';
         this.selectedChallengeColor = '#7c5cff';
 
+        // 初始化关联配置状态
+        this.selectedMatchMode = 'all';
+        this.selectedMatchCategories = [];
+        this.selectedMatchTemplateIds = [];
+
         // 重置UI
         this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === 'daily');
@@ -2279,6 +2306,15 @@ class App {
         this.challengeTemplateGrid.querySelectorAll('.challenge-template-card').forEach(e => e.classList.remove('selected'));
         this.challengeIconGrid.querySelector('[data-icon="🎯"]')?.click();
         this.challengeColorGrid.querySelector('[data-color="#7c5cff"]')?.click();
+
+        // 重置关联配置UI
+        this.taskMatchGroup.style.display = 'none';
+        this.matchModeSelector.querySelectorAll('.match-mode-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.mode === 'all');
+        });
+        this.matchModeSelector.querySelector('input[value="all"]').checked = true;
+        this.matchCategoriesPanel.style.display = 'none';
+        this.matchTemplatesPanel.style.display = 'none';
 
         this.createChallengeModal.classList.add('active');
     }
@@ -2290,6 +2326,7 @@ class App {
     createChallenge() {
         const name = this.challengeNameInput.value.trim();
         const target = parseInt(this.challengeTargetInput.value);
+        const unit = this.challengeUnitSelect.value;
 
         if (!name) {
             alert('请输入挑战名称');
@@ -2301,19 +2338,129 @@ class App {
             return;
         }
 
+        // 构建关联配置
+        let matchConfig = {
+            matchMode: 'all',
+            matchCategories: [],
+            matchTaskIds: [],
+            matchTemplateIds: []
+        };
+
+        if (unit === 'tasks' || unit === 'steps') {
+            matchConfig.matchMode = this.selectedMatchMode;
+
+            if (this.selectedMatchMode === 'category') {
+                matchConfig.matchCategories = this.getSelectedMatchCategories();
+            } else if (this.selectedMatchMode === 'specific') {
+                matchConfig.matchTemplateIds = this.getSelectedMatchTemplateIds();
+            }
+        }
+
         const challenge = this.challengeManager.createChallenge({
             type: this.selectedChallengeType,
             name: name,
             target: target,
-            unit: this.challengeUnitSelect.value,
+            unit: unit,
             category: this.challengeCategorySelect.value,
             icon: this.selectedChallengeIcon,
             color: this.selectedChallengeColor,
-            resetPeriod: this.selectedChallengeType === 'custom' ? parseInt(this.challengePeriodInput.value) : null
+            resetPeriod: this.selectedChallengeType === 'custom' ? parseInt(this.challengePeriodInput.value) : null,
+            ...matchConfig
         });
 
         this.hideCreateChallengeModal();
         this.renderChallenges();
+    }
+
+    // 单位变化时显示/隐藏关联配置
+    onChallengeUnitChange() {
+        const unit = this.challengeUnitSelect.value;
+        const showTaskMatch = (unit === 'tasks' || unit === 'steps');
+        this.taskMatchGroup.style.display = showTaskMatch ? 'block' : 'none';
+
+        if (showTaskMatch) {
+            // 渲染分类和模板列表
+            this.renderMatchCategoryGrid();
+            this.renderMatchTemplateList();
+        } else {
+            // 重置为全局匹配
+            this.selectedMatchMode = 'all';
+            this.matchModeSelector.querySelector('input[value="all"]').checked = true;
+            this.onMatchModeChange('all');
+        }
+    }
+
+    // 切换关联模式
+    onMatchModeChange(mode) {
+        this.selectedMatchMode = mode;
+
+        // 更新UI状态
+        this.matchModeSelector.querySelectorAll('.match-mode-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.mode === mode);
+        });
+
+        this.matchCategoriesPanel.style.display = mode === 'category' ? 'block' : 'none';
+        this.matchTemplatesPanel.style.display = mode === 'specific' ? 'block' : 'none';
+    }
+
+    // 渲染分类多选网格
+    renderMatchCategoryGrid() {
+        const categories = ['日常', '学习', '工作', '健康', '运动'];
+        this.matchCategoryGrid.innerHTML = categories.map(cat => `
+            <label class="category-checkbox">
+                <input type="checkbox" value="${cat}" ${this.selectedMatchCategories.includes(cat) ? 'checked' : ''}>
+                <span>${cat}</span>
+            </label>
+        `).join('');
+
+        // 绑定事件
+        this.matchCategoryGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                this.selectedMatchCategories = Array.from(
+                    this.matchCategoryGrid.querySelectorAll('input:checked')
+                ).map(el => el.value);
+            });
+        });
+    }
+
+    // 渲染模板选择列表
+    renderMatchTemplateList() {
+        // 获取所有模板（预设+自定义）
+        const presetTemplates = typeof TASK_TEMPLATES !== 'undefined' ? TASK_TEMPLATES : [];
+        const customTemplates = this.customTemplateManager ? this.customTemplateManager.getAll() : [];
+        const allTemplates = [...presetTemplates, ...customTemplates];
+
+        this.matchTemplateList.innerHTML = allTemplates.map(t => `
+            <label class="template-checkbox-item">
+                <input type="checkbox" data-id="${t.id}" ${this.selectedMatchTemplateIds.includes(t.id) ? 'checked' : ''}>
+                <span class="template-icon">${t.icon || '📋'}</span>
+                <span class="template-name">${t.name}</span>
+                <span class="template-category">${t.category || ''}</span>
+            </label>
+        `).join('');
+
+        // 绑定事件
+        this.matchTemplateList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                this.selectedMatchTemplateIds = Array.from(
+                    this.matchTemplateList.querySelectorAll('input:checked')
+                ).map(el => el.dataset.id);
+            });
+        });
+    }
+
+    // 获取选中的分类
+    getSelectedMatchCategories() {
+        return Array.from(
+            this.matchCategoryGrid.querySelectorAll('input:checked')
+        ).map(el => el.value);
+    }
+
+    // 获取选中的模板ID
+    getSelectedMatchTemplateIds() {
+        return Array.from(
+            this.matchTemplateList.querySelectorAll('input:checked')
+        ).map(el => el.dataset.id);
     }
 
     // ==================== 日历视图 ====================
