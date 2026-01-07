@@ -30,7 +30,8 @@ class TaskManager {
                 content: s,
                 completed: false,
                 skipped: false,
-                timeSpent: 0  // 每个步骤的用时（秒）
+                timeSpent: 0,  // 每个步骤的用时（秒）
+                notes: []  // 便签数组
             })),
             currentStep: 0,
             currentStepTime: 0,  // 当前步骤已用时间（用于暂停/恢复）
@@ -182,6 +183,65 @@ class TaskManager {
     clearAll() {
         this.tasks = [];
         localStorage.removeItem(this.storageKey);
+    }
+
+    // ========== 便签管理方法 ==========
+
+    // 添加便签到指定步骤
+    addNoteToStep(taskId, stepIndex, content) {
+        const task = this.getTask(taskId);
+        if (!task || stepIndex < 0 || stepIndex >= task.steps.length) return null;
+
+        // 确保steps有notes数组（兼容旧数据）
+        if (!task.steps[stepIndex].notes) {
+            task.steps[stepIndex].notes = [];
+        }
+
+        const note = {
+            id: generateId(),
+            content: content.trim(),
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        task.steps[stepIndex].notes.push(note);
+        this.saveToStorage();
+        return note;
+    }
+
+    // 更新便签
+    updateNote(taskId, stepIndex, noteId, content) {
+        const task = this.getTask(taskId);
+        if (!task || !task.steps[stepIndex]?.notes) return null;
+
+        const note = task.steps[stepIndex].notes.find(n => n.id === noteId);
+        if (!note) return null;
+
+        note.content = content.trim();
+        note.updatedAt = Date.now();
+        this.saveToStorage();
+        return note;
+    }
+
+    // 删除便签
+    deleteNote(taskId, stepIndex, noteId) {
+        const task = this.getTask(taskId);
+        if (!task || !task.steps[stepIndex]?.notes) return false;
+
+        const index = task.steps[stepIndex].notes.findIndex(n => n.id === noteId);
+        if (index !== -1) {
+            task.steps[stepIndex].notes.splice(index, 1);
+            this.saveToStorage();
+            return true;
+        }
+        return false;
+    }
+
+    // 获取步骤的所有便签
+    getStepNotes(taskId, stepIndex) {
+        const task = this.getTask(taskId);
+        if (!task || !task.steps[stepIndex]) return [];
+        return task.steps[stepIndex].notes || [];
     }
 }
 
@@ -489,6 +549,33 @@ class App {
         this.addEditorStep = document.getElementById('addEditorStep');
         this.cancelEditor = document.getElementById('cancelEditor');
         this.saveEditor = document.getElementById('saveEditor');
+
+        // 便签相关元素
+        this.stepNotesArea = document.getElementById('stepNotesArea');
+        this.addNoteBtn = document.getElementById('addNoteBtn');
+        this.notesIndicator = document.getElementById('notesIndicator');
+        this.notesCount = document.getElementById('notesCount');
+        this.notesPreview = document.getElementById('notesPreview');
+
+        // 便签编辑弹窗
+        this.noteModal = document.getElementById('noteModal');
+        this.closeNoteModal = document.getElementById('closeNoteModal');
+        this.noteContentInput = document.getElementById('noteContentInput');
+        this.noteEditMeta = document.getElementById('noteEditMeta');
+        this.noteEditTime = document.getElementById('noteEditTime');
+        this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
+        this.cancelNoteBtn = document.getElementById('cancelNoteBtn');
+        this.saveNoteBtn = document.getElementById('saveNoteBtn');
+
+        // 便签列表弹窗
+        this.notesListModal = document.getElementById('notesListModal');
+        this.closeNotesListModal = document.getElementById('closeNotesListModal');
+        this.notesList = document.getElementById('notesList');
+        this.notesEmpty = document.getElementById('notesEmpty');
+        this.addNewNoteBtn = document.getElementById('addNewNoteBtn');
+
+        // 便签编辑状态
+        this.editingNoteId = null;
     }
 
     initEventListeners() {
@@ -504,6 +591,19 @@ class App {
         this.skipStepBtn.addEventListener('click', () => this.skipCurrentStep());
         this.shelveTaskBtn.addEventListener('click', () => this.showShelveModal());
         this.pauseTimerBtn.addEventListener('click', () => this.toggleTimerPause());
+
+        // 便签功能
+        this.addNoteBtn?.addEventListener('click', () => this.showNoteModal());
+        this.closeNoteModal?.addEventListener('click', () => this.hideNoteModal());
+        this.cancelNoteBtn?.addEventListener('click', () => this.hideNoteModal());
+        this.saveNoteBtn?.addEventListener('click', () => this.saveNote());
+        this.deleteNoteBtn?.addEventListener('click', () => this.deleteCurrentNote());
+        this.notesIndicator?.addEventListener('click', () => this.showNotesListModal());
+        this.closeNotesListModal?.addEventListener('click', () => this.hideNotesListModal());
+        this.addNewNoteBtn?.addEventListener('click', () => {
+            this.hideNotesListModal();
+            this.showNoteModal();
+        });
 
         // 创建任务弹窗
         this.closeCreateModal.addEventListener('click', () => this.hideCreateTaskModal());
@@ -1001,6 +1101,9 @@ class App {
             this.shelveTaskBtn.style.display = '';
             this.skipStepBtn.disabled = currentStep >= totalSteps;
         }
+
+        // 更新便签显示
+        this.updateNotesDisplay();
     }
 
     completeCurrentStep() {
@@ -1909,6 +2012,166 @@ class App {
 
     hideSettingsModal() {
         this.settingsModal.classList.remove('active');
+    }
+
+    // ==================== 便签管理 ====================
+
+    showNoteModal(noteId = null) {
+        this.editingNoteId = noteId;
+        this.noteContentInput.value = '';
+        this.deleteNoteBtn.style.display = 'none';
+        this.noteEditMeta.style.display = 'none';
+
+        if (noteId) {
+            // 编辑模式
+            const stepIndex = this.viewOnlyMode ? this.viewCurrentStep : this.currentTask.currentStep;
+            const notes = this.taskManager.getStepNotes(this.currentTask.id, stepIndex);
+            const note = notes.find(n => n.id === noteId);
+
+            if (note) {
+                this.noteContentInput.value = note.content;
+                this.deleteNoteBtn.style.display = '';
+                this.noteEditMeta.style.display = 'block';
+                this.noteEditTime.textContent = this.formatNoteTime(note.updatedAt);
+            }
+        }
+
+        this.noteModal.classList.add('active');
+        this.noteContentInput.focus();
+    }
+
+    hideNoteModal() {
+        this.noteModal.classList.remove('active');
+        this.editingNoteId = null;
+    }
+
+    saveNote() {
+        const content = this.noteContentInput.value.trim();
+        if (!content || !this.currentTask) return;
+
+        const stepIndex = this.viewOnlyMode ? this.viewCurrentStep : this.currentTask.currentStep;
+
+        if (this.editingNoteId) {
+            // 更新便签
+            this.taskManager.updateNote(this.currentTask.id, stepIndex, this.editingNoteId, content);
+        } else {
+            // 创建新便签
+            this.taskManager.addNoteToStep(this.currentTask.id, stepIndex, content);
+        }
+
+        this.hideNoteModal();
+        this.updateNotesDisplay();
+    }
+
+    deleteCurrentNote() {
+        if (!this.editingNoteId || !this.currentTask) return;
+
+        const stepIndex = this.viewOnlyMode ? this.viewCurrentStep : this.currentTask.currentStep;
+        this.taskManager.deleteNote(this.currentTask.id, stepIndex, this.editingNoteId);
+
+        this.hideNoteModal();
+        this.updateNotesDisplay();
+    }
+
+    showNotesListModal() {
+        if (!this.currentTask) return;
+
+        const stepIndex = this.viewOnlyMode ? this.viewCurrentStep : this.currentTask.currentStep;
+        const notes = this.taskManager.getStepNotes(this.currentTask.id, stepIndex);
+
+        if (notes.length === 0) {
+            this.notesList.innerHTML = '';
+            this.notesEmpty.style.display = 'block';
+            this.addNewNoteBtn.style.display = this.viewOnlyMode ? 'none' : '';
+        } else {
+            this.notesEmpty.style.display = 'none';
+            this.addNewNoteBtn.style.display = this.viewOnlyMode ? 'none' : '';
+
+            this.notesList.innerHTML = notes.map(note => `
+                <div class="note-item" data-note-id="${note.id}">
+                    <div class="note-content">${escapeHtml(note.content)}</div>
+                    <div class="note-footer">
+                        <span class="note-time">${this.formatNoteTime(note.updatedAt)}</span>
+                        ${this.viewOnlyMode ? '' : `
+                            <button class="note-edit-btn" data-action="edit">
+                                <span>✏️</span>
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+
+            // 添加编辑事件
+            if (!this.viewOnlyMode) {
+                this.notesList.querySelectorAll('.note-edit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const noteId = e.target.closest('.note-item').dataset.noteId;
+                        this.hideNotesListModal();
+                        this.showNoteModal(noteId);
+                    });
+                });
+            }
+        }
+
+        this.notesListModal.classList.add('active');
+    }
+
+    hideNotesListModal() {
+        this.notesListModal.classList.remove('active');
+    }
+
+    updateNotesDisplay() {
+        if (!this.currentTask || !this.stepNotesArea) return;
+
+        const stepIndex = this.viewOnlyMode ? this.viewCurrentStep : this.currentTask.currentStep;
+        const notes = this.taskManager.getStepNotes(this.currentTask.id, stepIndex);
+
+        // 更新指示器
+        if (notes.length > 0) {
+            this.notesIndicator.style.display = 'flex';
+            this.notesCount.textContent = notes.length;
+
+            // 显示最近一条便签预览
+            const latestNote = notes[notes.length - 1];
+            this.notesPreview.innerHTML = `
+                <div class="note-preview-card" data-note-id="${latestNote.id}">
+                    <span class="note-preview-icon">📝</span>
+                    <span class="note-preview-text">${escapeHtml(this.truncateText(latestNote.content, 30))}</span>
+                </div>
+            `;
+            this.notesPreview.style.display = 'block';
+
+            // 点击预览打开列表
+            this.notesPreview.querySelector('.note-preview-card')?.addEventListener('click', () => {
+                this.showNotesListModal();
+            });
+        } else {
+            this.notesIndicator.style.display = 'none';
+            this.notesPreview.style.display = 'none';
+            this.notesPreview.innerHTML = '';
+        }
+
+        // 查看模式下隐藏添加按钮
+        if (this.addNoteBtn) {
+            this.addNoteBtn.style.display = this.viewOnlyMode ? 'none' : '';
+        }
+    }
+
+    formatNoteTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return this.t('just_now') || '刚刚';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)} ${this.t('minutes_ago') || '分钟前'}`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)} ${this.t('hours_ago') || '小时前'}`;
+
+        return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
     }
 
     clearAllData() {

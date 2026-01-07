@@ -139,6 +139,21 @@
                 </div>
             </div>
 
+            <!-- 便签区域 -->
+            <div class="step-notes-area" id="stepNotesArea">
+                <div class="notes-header">
+                    <button class="add-note-btn" id="addNoteBtn">
+                        <span class="note-icon">📝</span>
+                        <span class="note-text" data-i18n="add_note">添加便签</span>
+                    </button>
+                    <div class="notes-indicator" id="notesIndicator" style="display: none;">
+                        <span class="notes-count" id="notesCount">0</span>
+                        <span data-i18n="notes_suffix">条便签</span>
+                    </div>
+                </div>
+                <div class="notes-preview" id="notesPreview"></div>
+            </div>
+
             <!-- 教练话语 -->
             <div class="coach-message">
                 <span class="coach-avatar" id="coachAvatar">👩</span>
@@ -689,6 +704,56 @@
         <div class="achievement-info">
             <h4>成就解锁！</h4>
             <h3 id="achievementName">成就名称</h3>
+        </div>
+    </div>
+
+    <!-- 便签编辑弹窗 -->
+    <div class="modal-overlay" id="noteModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="note_title">便签</h3>
+                <button class="modal-close" id="closeNoteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="noteContentInput" class="form-textarea note-textarea"
+                          placeholder="记录你的想法..."
+                          maxlength="500"
+                          data-i18n-placeholder="note_placeholder"></textarea>
+                <div class="note-meta" id="noteEditMeta" style="display: none;">
+                    <span class="note-time" id="noteEditTime"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger btn-sm" id="deleteNoteBtn" style="display: none;">
+                    <span data-i18n="delete">删除</span>
+                </button>
+                <div style="flex: 1;"></div>
+                <button class="btn btn-secondary" id="cancelNoteBtn" data-i18n="cancel">取消</button>
+                <button class="btn btn-primary" id="saveNoteBtn" data-i18n="save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 便签列表弹窗 -->
+    <div class="modal-overlay" id="notesListModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="notes_list_title">步骤便签</h3>
+                <button class="modal-close" id="closeNotesListModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="notes-list" id="notesList"></div>
+                <div class="notes-empty" id="notesEmpty" style="display: none;">
+                    <span class="empty-icon">📝</span>
+                    <p data-i18n="no_notes">还没有便签</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="addNewNoteBtn">
+                    <span>+</span>
+                    <span data-i18n="add_note">添加便签</span>
+                </button>
+            </div>
         </div>
     </div>
 

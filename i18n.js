@@ -185,6 +185,17 @@ const TRANSLATIONS = {
         edit: '编辑',
         close: '关闭',
 
+        // 便签功能
+        add_note: '添加便签',
+        note_title: '便签',
+        note_placeholder: '记录你的想法...',
+        notes_list_title: '步骤便签',
+        notes_suffix: '条便签',
+        no_notes: '还没有便签',
+        just_now: '刚刚',
+        minutes_ago: '分钟前',
+        hours_ago: '小时前',
+
         // 表单验证
         required_field: '此字段为必填',
         invalid_value: '请输入有效的数值',
@@ -451,6 +462,17 @@ const TRANSLATIONS = {
         delete: 'Delete',
         edit: 'Edit',
         close: 'Close',
+
+        // Notes Feature
+        add_note: 'Add Note',
+        note_title: 'Note',
+        note_placeholder: 'Write your thoughts...',
+        notes_list_title: 'Step Notes',
+        notes_suffix: 'notes',
+        no_notes: 'No notes yet',
+        just_now: 'Just now',
+        minutes_ago: 'min ago',
+        hours_ago: 'h ago',
 
         // Form Validation
         required_field: 'This field is required',
