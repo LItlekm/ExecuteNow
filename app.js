@@ -923,7 +923,9 @@ class App {
         // 更新进度
         this.currentStepNum.textContent = Math.min(currentStep + 1, totalSteps);
         this.totalStepNum.textContent = totalSteps;
-        this.progressFill.style.width = `${(currentStep / totalSteps) * 100}%`;
+        const progressSteps = this.viewOnlyMode ? (currentStep + 1) : currentStep;
+        const progressRatio = totalSteps > 0 ? (Math.min(progressSteps, totalSteps) / totalSteps) : 0;
+        this.progressFill.style.width = `${progressRatio * 100}%`;
 
         // 更新步骤内容
         if (currentStep < totalSteps) {
