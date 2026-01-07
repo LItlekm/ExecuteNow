@@ -496,37 +496,27 @@ class App {
             if (e.key === 'Enter') this.addStep();
         });
         this.taskNameInput.addEventListener('input', () => this.updateCreateButton());
-        this.createTaskModal.addEventListener('click', (e) => {
-            if (e.target === this.createTaskModal) this.hideCreateTaskModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 模板弹窗
         this.closeTemplateModal.addEventListener('click', () => this.hideTemplateModal());
-        this.templateModal.addEventListener('click', (e) => {
-            if (e.target === this.templateModal) this.hideTemplateModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 模板预览弹窗
         this.closePreviewModal.addEventListener('click', () => this.hideTemplatePreviewModal());
         this.cancelUseTemplate.addEventListener('click', () => this.hideTemplatePreviewModal());
         this.confirmUseTemplate.addEventListener('click', () => this.useTemplate());
-        this.templatePreviewModal.addEventListener('click', (e) => {
-            if (e.target === this.templatePreviewModal) this.hideTemplatePreviewModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 搁置弹窗
         this.closeShelveModal.addEventListener('click', () => this.hideShelveModal());
         this.cancelShelve.addEventListener('click', () => this.hideShelveModal());
         this.confirmShelve.addEventListener('click', () => this.shelveCurrentTask());
-        this.shelveModal.addEventListener('click', (e) => {
-            if (e.target === this.shelveModal) this.hideShelveModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 设置弹窗
         this.closeSettingsModal.addEventListener('click', () => this.hideSettingsModal());
-        this.settingsModal.addEventListener('click', (e) => {
-            if (e.target === this.settingsModal) this.hideSettingsModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
         this.defaultCoachSelect.addEventListener('change', (e) => {
             this.settingsManager.set('defaultCoach', e.target.value);
         });
@@ -552,9 +542,7 @@ class App {
         this.closeDeleteModal.addEventListener('click', () => this.hideDeleteConfirmModal());
         this.cancelDelete.addEventListener('click', () => this.hideDeleteConfirmModal());
         this.confirmDelete.addEventListener('click', () => this.deleteTask());
-        this.deleteConfirmModal.addEventListener('click', (e) => {
-            if (e.target === this.deleteConfirmModal) this.hideDeleteConfirmModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 自定义模板 - 标签页切换
         this.templateTabs.forEach(tab => {
@@ -581,9 +569,7 @@ class App {
                 this.addTag();
             }
         });
-        this.customEditorModal.addEventListener('click', (e) => {
-            if (e.target === this.customEditorModal) this.hideCustomEditor();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 连续天数显示区 - 点击显示日历
         this.streakDisplay.addEventListener('click', () => this.showCalendarModal());
@@ -593,9 +579,7 @@ class App {
         this.closeCreateChallengeModal.addEventListener('click', () => this.hideCreateChallengeModal());
         this.cancelCreateChallenge.addEventListener('click', () => this.hideCreateChallengeModal());
         this.confirmCreateChallenge.addEventListener('click', () => this.createChallenge());
-        this.createChallengeModal.addEventListener('click', (e) => {
-            if (e.target === this.createChallengeModal) this.hideCreateChallengeModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
 
         // 挑战类型选择
         this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
@@ -604,9 +588,7 @@ class App {
 
         // 日历弹窗
         this.closeCalendarModal.addEventListener('click', () => this.hideCalendarModal());
-        this.calendarModal.addEventListener('click', (e) => {
-            if (e.target === this.calendarModal) this.hideCalendarModal();
-        });
+        // 禁用点击空白处关闭弹窗（防止误触）
         this.calendarPrevBtn.addEventListener('click', () => this.changeCalendarMonth(-1));
         this.calendarNextBtn.addEventListener('click', () => this.changeCalendarMonth(1));
 
