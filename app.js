@@ -236,6 +236,12 @@ class App {
         this.settingsManager = new SettingsManager();
         this.customTemplateManager = new CustomTemplateManager();
 
+        // 新功能管理器
+        this.usageStats = new UsageStatsManager();
+        this.challengeManager = new ChallengeManager();
+        // 共享通知管理器
+        this.challengeManager.notificationManager = this.usageStats.notificationManager;
+
         // 当前状态
         this.currentTask = null;
         this.selectedCoachId = null;
@@ -268,6 +274,13 @@ class App {
         this.initEventListeners();
         this.applyTheme();
         this.render();
+
+        // 记录今日首次启动活动
+        this.usageStats.recordActivity({
+            tasksCompleted: 0,
+            stepsCompleted: 0,
+            timeSpent: 0
+        });
     }
 
     // ==================== 初始化 ====================
@@ -278,6 +291,55 @@ class App {
         this.taskList = document.getElementById('taskList');
         this.taskCount = document.getElementById('taskCount');
         this.emptyState = document.getElementById('emptyState');
+
+        // 连续天数显示区
+        this.streakDisplay = document.getElementById('streakDisplay');
+        this.streakFlame = document.getElementById('streakFlame');
+        this.currentStreak = document.getElementById('currentStreak');
+        this.longestStreak = document.getElementById('longestStreak');
+        this.todayTasks = document.getElementById('todayTasks');
+        this.freezeTokens = document.getElementById('freezeTokens');
+
+        // 挑战系统
+        this.challengesSection = document.getElementById('challengesSection');
+        this.challengesList = document.getElementById('challengesList');
+        this.challengesEmpty = document.getElementById('challengesEmpty');
+        this.createChallengeBtn = document.getElementById('createChallengeBtn');
+
+        // 创建挑战弹窗
+        this.createChallengeModal = document.getElementById('createChallengeModal');
+        this.closeCreateChallengeModal = document.getElementById('closeCreateChallengeModal');
+        this.cancelCreateChallenge = document.getElementById('cancelCreateChallenge');
+        this.confirmCreateChallenge = document.getElementById('confirmCreateChallenge');
+        this.challengeTypeSelector = document.getElementById('challengeTypeSelector');
+        this.challengeTemplateGrid = document.getElementById('challengeTemplateGrid');
+        this.challengeNameInput = document.getElementById('challengeNameInput');
+        this.challengeTargetInput = document.getElementById('challengeTargetInput');
+        this.challengeUnitSelect = document.getElementById('challengeUnitSelect');
+        this.challengeCategorySelect = document.getElementById('challengeCategorySelect');
+        this.challengeIconGrid = document.getElementById('challengeIconGrid');
+        this.challengeColorGrid = document.getElementById('challengeColorGrid');
+        this.customPeriodGroup = document.getElementById('customPeriodGroup');
+        this.challengePeriodInput = document.getElementById('challengePeriodInput');
+
+        // 日历弹窗
+        this.calendarModal = document.getElementById('calendarModal');
+        this.closeCalendarModal = document.getElementById('closeCalendarModal');
+        this.calendarMonthTitle = document.getElementById('calendarMonthTitle');
+        this.calendarPrevBtn = document.getElementById('calendarPrevBtn');
+        this.calendarNextBtn = document.getElementById('calendarNextBtn');
+        this.calendarDaysGrid = document.getElementById('calendarDaysGrid');
+
+        // 成就通知
+        this.achievementNotification = document.getElementById('achievementNotification');
+        this.achievementIcon = document.getElementById('achievementIcon');
+        this.achievementName = document.getElementById('achievementName');
+
+        // 挑战创建状态
+        this.selectedChallengeType = 'daily';
+        this.selectedChallengeIcon = '🎯';
+        this.selectedChallengeColor = '#7c5cff';
+        this.selectedTemplate = null;
 
         // 头部按钮
         this.settingsBtn = document.getElementById('settingsBtn');
@@ -486,6 +548,38 @@ class App {
         this.customEditorModal.addEventListener('click', (e) => {
             if (e.target === this.customEditorModal) this.hideCustomEditor();
         });
+
+        // 连续天数显示区 - 点击显示日历
+        this.streakDisplay.addEventListener('click', () => this.showCalendarModal());
+
+        // 挑战系统
+        this.createChallengeBtn.addEventListener('click', () => this.showCreateChallengeModal());
+        this.closeCreateChallengeModal.addEventListener('click', () => this.hideCreateChallengeModal());
+        this.cancelCreateChallenge.addEventListener('click', () => this.hideCreateChallengeModal());
+        this.confirmCreateChallenge.addEventListener('click', () => this.createChallenge());
+        this.createChallengeModal.addEventListener('click', (e) => {
+            if (e.target === this.createChallengeModal) this.hideCreateChallengeModal();
+        });
+
+        // 挑战类型选择
+        this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.selectChallengeType(btn.dataset.type));
+        });
+
+        // 日历弹窗
+        this.closeCalendarModal.addEventListener('click', () => this.hideCalendarModal());
+        this.calendarModal.addEventListener('click', (e) => {
+            if (e.target === this.calendarModal) this.hideCalendarModal();
+        });
+        this.calendarPrevBtn.addEventListener('click', () => this.changeCalendarMonth(-1));
+        this.calendarNextBtn.addEventListener('click', () => this.changeCalendarMonth(1));
+
+        // 应用内事件监听
+        window.addEventListener('app:achievement-unlock', (e) => this.showAchievementNotification(e.detail.achievement));
+        window.addEventListener('app:challenge-complete', (e) => this.handleChallengeComplete(e.detail.challenge));
+
+        // 初始化挑战相关UI
+        this.initChallengeUI();
     }
 
     // ==================== 主题 ====================
@@ -512,6 +606,8 @@ class App {
     // ==================== 渲染 ====================
 
     render() {
+        this.renderStreakDisplay();
+        this.renderChallenges();
         this.renderTaskList();
     }
 
@@ -769,10 +865,39 @@ class App {
         const stepTime = this.stepTimerSeconds;
         const task = this.taskManager.completeStep(this.currentTask.id, stepTime);
 
+        // 记录活动
+        this.usageStats.recordActivity({
+            stepsCompleted: 1,
+            timeSpent: stepTime
+        });
+
+        // 更新挑战进度（步骤类型）
+        const stepChallenges = this.challengeManager.getActiveChallenges().filter(c => c.unit === 'steps');
+        stepChallenges.forEach(c => {
+            this.challengeManager.updateProgress(c.id, 1);
+        });
+        this.renderChallenges();
+        this.renderStreakDisplay();
+
         if (task.status === 'completed') {
+            // 任务完成 - 记录活动
+            this.usageStats.recordActivity({
+                tasksCompleted: 1,
+                stepsCompleted: 0,
+                timeSpent: 0
+            });
+
+            // 更新任务类型挑战
+            const taskChallenges = this.challengeManager.getActiveChallenges().filter(c => c.unit === 'tasks');
+            taskChallenges.forEach(c => {
+                this.challengeManager.updateProgress(c.id, 1);
+            });
+
             // 停止计时器并显示完成动画
             this.stopStepTimer();
             this.showCompletionAnimation();
+            this.renderChallenges();
+            this.renderStreakDisplay();
         } else {
             // 重置计时器开始下一步
             this.stepTimerSeconds = 0;
@@ -1881,6 +2006,305 @@ class App {
         // 超过1分钟显示警告状态
         else if (this.stepTimerSeconds >= 60) {
             this.stepTimerContainer.classList.add('warning');
+        }
+    }
+
+    // ==================== 连续天数显示区 ====================
+
+    renderStreakDisplay() {
+        const summary = this.usageStats.getStreakSummary();
+        const todayStats = this.usageStats.getTodayStats();
+
+        this.currentStreak.textContent = summary.current;
+        this.longestStreak.textContent = summary.longest;
+        this.todayTasks.textContent = todayStats.tasksCompleted;
+
+        // 冻龄符显示
+        this.freezeTokens.innerHTML = '';
+        for (let i = 0; i < summary.freezeStreak; i++) {
+            const token = document.createElement('span');
+            token.className = 'freeze-token available';
+            token.textContent = '❄️';
+            token.title = '冻龄符 - 保护连续不中断';
+            this.freezeTokens.appendChild(token);
+        }
+
+        // 冻结状态
+        if (summary.isFrozen) {
+            this.streakFlame.classList.add('frozen');
+        } else {
+            this.streakFlame.classList.remove('frozen');
+        }
+    }
+
+    // ==================== 挑战系统 ====================
+
+    initChallengeUI() {
+        // 初始化图标选择器
+        const icons = ['🎯', '📚', '💪', '🏃', '📖', '💻', '🎨', '🎵', '🌅', '💤', '🍎', '💧', '🧘', '✍️', '📝', '✅'];
+        this.challengeIconGrid.innerHTML = icons.map(icon => `
+            <div class="challenge-icon-option ${icon === this.selectedChallengeIcon ? 'selected' : ''}"
+                 data-icon="${icon}">${icon}</div>
+        `).join('');
+
+        this.challengeIconGrid.querySelectorAll('.challenge-icon-option').forEach(el => {
+            el.addEventListener('click', () => {
+                this.challengeIconGrid.querySelectorAll('.challenge-icon-option').forEach(e => e.classList.remove('selected'));
+                el.classList.add('selected');
+                this.selectedChallengeIcon = el.dataset.icon;
+            });
+        });
+
+        // 初始化颜色选择器
+        const colors = ['#7c5cff', '#ff7eb3', '#ffa07a', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+        this.challengeColorGrid.innerHTML = colors.map(color => `
+            <div class="challenge-color-option ${color === this.selectedChallengeColor ? 'selected' : ''}"
+                 style="background: ${color}"
+                 data-color="${color}"></div>
+        `).join('');
+
+        this.challengeColorGrid.querySelectorAll('.challenge-color-option').forEach(el => {
+            el.addEventListener('click', () => {
+                this.challengeColorGrid.querySelectorAll('.challenge-color-option').forEach(e => e.classList.remove('selected'));
+                el.classList.add('selected');
+                this.selectedChallengeColor = el.dataset.color;
+            });
+        });
+
+        // 加载快捷模板
+        this.renderChallengeTemplates();
+    }
+
+    renderChallengeTemplates() {
+        const templates = this.challengeManager.getQuickTemplates();
+        this.challengeTemplateGrid.innerHTML = templates.map(t => `
+            <div class="challenge-template-card" data-template='${JSON.stringify(t)}'>
+                <div class="challenge-template-icon">${t.icon}</div>
+                <div class="challenge-template-name">${t.name}</div>
+            </div>
+        `).join('');
+
+        this.challengeTemplateGrid.querySelectorAll('.challenge-template-card').forEach(el => {
+            el.addEventListener('click', () => {
+                this.challengeTemplateGrid.querySelectorAll('.challenge-template-card').forEach(e => e.classList.remove('selected'));
+                el.classList.add('selected');
+                this.selectedTemplate = JSON.parse(el.dataset.template);
+                // 填充表单
+                this.challengeNameInput.value = this.selectedTemplate.name;
+                this.challengeTargetInput.value = this.selectedTemplate.target;
+                this.challengeUnitSelect.value = this.selectedTemplate.unit;
+                this.challengeCategorySelect.value = this.selectedTemplate.category;
+                this.selectedChallengeIcon = this.selectedTemplate.icon;
+                this.selectedChallengeColor = this.selectedTemplate.color;
+                // 更新图标和颜色选择
+                this.challengeIconGrid.querySelector(`[data-icon="${this.selectedChallengeIcon}"]`)?.click();
+                this.challengeColorGrid.querySelector(`[data-color="${this.selectedChallengeColor}"]`)?.click();
+            });
+        });
+    }
+
+    renderChallenges() {
+        const challenges = this.challengeManager.getTodayProgress();
+
+        if (challenges.length === 0) {
+            this.challengesList.innerHTML = '';
+            this.challengesList.appendChild(this.challengesEmpty);
+            this.challengesEmpty.style.display = 'block';
+            return;
+        }
+
+        this.challengesEmpty.style.display = 'none';
+
+        this.challengesList.innerHTML = challenges.map(c => {
+            const progress = c.target > 0 ? (c.current / c.target) : 0;
+            const unitLabels = { minutes: '分钟', tasks: '任务', steps: '步骤', times: '次', checkin: '打卡' };
+            const unitLabel = unitLabels[c.unit] || c.unit;
+
+            return `
+                <div class="challenge-card ${c.completedToday ? 'completed' : ''}"
+                     data-challenge-id="${c.id}"
+                     style="--challenge-color: ${c.color}; --challenge-color-light: ${c.color}20">
+                    <div class="challenge-header">
+                        <div class="challenge-icon">${c.icon}</div>
+                        <div class="challenge-info">
+                            <div class="challenge-name">${c.name}</div>
+                            <div class="challenge-meta">
+                                <span class="challenge-category">${c.category}</span>
+                                ${c.streak > 0 ? `<span class="challenge-streak">🔥 ${c.streak}天</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-bar">
+                            <div class="challenge-progress-fill" style="width: ${progress * 100}%"></div>
+                        </div>
+                        <div class="challenge-progress-text">
+                            <span class="challenge-progress-current">${c.current}/${c.target}</span>
+                            <span class="challenge-progress-target">${unitLabel}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 点击卡片显示详情（可选功能）
+        this.challengesList.querySelectorAll('.challenge-card').forEach(el => {
+            el.addEventListener('click', () => {
+                const challengeId = el.dataset.challengeId;
+                // 可以扩展为显示详情弹窗
+            });
+        });
+    }
+
+    selectChallengeType(type) {
+        this.selectedChallengeType = type;
+        this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type);
+        });
+
+        // 显示/隐藏自定义周期设置
+        this.customPeriodGroup.style.display = type === 'custom' ? 'block' : 'none';
+    }
+
+    showCreateChallengeModal() {
+        this.selectedTemplate = null;
+        this.challengeNameInput.value = '';
+        this.challengeTargetInput.value = '';
+        this.selectedChallengeType = 'daily';
+        this.selectedChallengeIcon = '🎯';
+        this.selectedChallengeColor = '#7c5cff';
+
+        // 重置UI
+        this.challengeTypeSelector.querySelectorAll('.challenge-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === 'daily');
+        });
+        this.customPeriodGroup.style.display = 'none';
+        this.challengeTemplateGrid.querySelectorAll('.challenge-template-card').forEach(e => e.classList.remove('selected'));
+        this.challengeIconGrid.querySelector('[data-icon="🎯"]')?.click();
+        this.challengeColorGrid.querySelector('[data-color="#7c5cff"]')?.click();
+
+        this.createChallengeModal.classList.add('active');
+    }
+
+    hideCreateChallengeModal() {
+        this.createChallengeModal.classList.remove('active');
+    }
+
+    createChallenge() {
+        const name = this.challengeNameInput.value.trim();
+        const target = parseInt(this.challengeTargetInput.value);
+
+        if (!name) {
+            alert('请输入挑战名称');
+            return;
+        }
+
+        if (!target || target < 1) {
+            alert('请输入有效的目标数值');
+            return;
+        }
+
+        const challenge = this.challengeManager.createChallenge({
+            type: this.selectedChallengeType,
+            name: name,
+            target: target,
+            unit: this.challengeUnitSelect.value,
+            category: this.challengeCategorySelect.value,
+            icon: this.selectedChallengeIcon,
+            color: this.selectedChallengeColor,
+            resetPeriod: this.selectedChallengeType === 'custom' ? parseInt(this.challengePeriodInput.value) : null
+        });
+
+        this.hideCreateChallengeModal();
+        this.renderChallenges();
+    }
+
+    // ==================== 日历视图 ====================
+
+    showCalendarModal() {
+        this.calendarCurrentDate = new Date();
+        this.renderCalendar();
+        this.calendarModal.classList.add('active');
+    }
+
+    hideCalendarModal() {
+        this.calendarModal.classList.remove('active');
+    }
+
+    changeCalendarMonth(delta) {
+        this.calendarCurrentDate.setMonth(this.calendarCurrentDate.getMonth() + delta);
+        this.renderCalendar();
+    }
+
+    renderCalendar() {
+        const year = this.calendarCurrentDate.getFullYear();
+        const month = this.calendarCurrentDate.getMonth();
+
+        this.calendarMonthTitle.textContent = `${year}年${month + 1}月`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+
+        const calendarData = this.usageStats.getCalendarData(year, month);
+
+        let html = '';
+
+        // 填充月初空白
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="calendar-day inactive"></div>';
+        }
+
+        // 填充日期
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayData = calendarData[day];
+            const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+
+            if (dayData?.active) {
+                const level = dayData.tasksCompleted >= 5 ? 3 : dayData.tasksCompleted >= 2 ? 2 : 1;
+                classes += ` active-level-${level}`;
+            }
+
+            html += `<div class="${classes}">${day}</div>`;
+        }
+
+        this.calendarDaysGrid.innerHTML = html;
+    }
+
+    // ==================== 成就通知 ====================
+
+    showAchievementNotification(achievement) {
+        this.achievementIcon.textContent = achievement.icon;
+        this.achievementName.textContent = achievement.name;
+
+        this.achievementNotification.classList.add('show');
+
+        setTimeout(() => {
+            this.achievementNotification.classList.remove('show');
+        }, 4000);
+    }
+
+    handleChallengeComplete(challenge) {
+        // 可以在这里添加额外的完成处理逻辑
+        this.renderChallenges();
+    }
+
+    // ==================== 活动记录集成 ====================
+
+    recordTaskActivity() {
+        const todayStats = this.usageStats.getTodayStats();
+        const tasksCompleted = this.taskManager.getAllTasks().filter(t => t.status === 'completed').length - todayStats.tasksCompleted;
+
+        if (tasksCompleted > 0) {
+            this.usageStats.recordActivity({
+                tasksCompleted: tasksCompleted,
+                stepsCompleted: 0,
+                timeSpent: 0
+            });
+            this.renderStreakDisplay();
         }
     }
 }

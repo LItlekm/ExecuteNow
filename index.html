@@ -22,16 +22,63 @@
         </header>
 
         <main class="main-content">
+            <!-- 连续天数显示区 -->
+            <section class="streak-display" id="streakDisplay">
+                <div class="streak-display-content">
+                    <div class="streak-main">
+                        <div class="streak-flame-wrapper">
+                            <span class="streak-flame" id="streakFlame">🔥</span>
+                        </div>
+                        <div class="streak-info">
+                            <div class="streak-number"><span id="currentStreak">0</span> 天</div>
+                            <div class="streak-label">连续使用</div>
+                            <div class="freeze-streak-tokens" id="freezeTokens"></div>
+                        </div>
+                    </div>
+                    <div class="streak-stats">
+                        <div class="streak-stat">
+                            <div class="streak-stat-value" id="todayTasks">0</div>
+                            <div class="streak-stat-label">今日完成</div>
+                        </div>
+                        <div class="streak-stat">
+                            <div class="streak-stat-value">最高 <span id="longestStreak">0</span></div>
+                            <div class="streak-stat-label">天</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- 快速操作 -->
             <section class="quick-actions">
                 <button id="createTaskBtn" class="action-card action-card-primary">
                     <span class="action-icon">✨</span>
-                    <span class="action-text">创建新任务</span>
+                    <span class="action-text">创���新任务</span>
                 </button>
                 <button id="useTemplateBtn" class="action-card action-card-secondary">
                     <span class="action-icon">📋</span>
                     <span class="action-text">使用模板</span>
                 </button>
+            </section>
+
+            <!-- 挑战系统 -->
+            <section class="challenges-section" id="challengesSection">
+                <div class="challenges-header">
+                    <h2 class="challenges-title">今日挑战</h2>
+                    <button class="create-challenge-btn" id="createChallengeBtn">
+                        <span>+</span>
+                        <span>创建挑战</span>
+                    </button>
+                </div>
+                <div class="challenges-list" id="challengesList">
+                    <div class="challenge-empty" id="challengesEmpty">
+                        <span class="challenge-empty-icon">🎯</span>
+                        <p class="challenge-empty-text">还没有挑战</p>
+                        <p class="challenge-empty-hint">创建一个挑战，养成好习惯</p>
+                        <button class="btn btn-primary" style="margin-top: 8px;" onclick="document.getElementById('createChallengeBtn').click()">
+                            + 创建挑战
+                        </button>
+                    </div>
+                </div>
             </section>
 
             <!-- 任务列表 -->
@@ -401,11 +448,151 @@
         </div>
     </div>
 
+    <!-- 创建挑战弹窗 -->
+    <div class="modal-overlay" id="createChallengeModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title">创建挑战</h3>
+                <button class="modal-close" id="closeCreateChallengeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 挑战类型选择 -->
+                <div class="form-group">
+                    <label class="form-label">挑战类型</label>
+                    <div class="challenge-type-selector" id="challengeTypeSelector">
+                        <button class="challenge-type-btn active" data-type="daily">每日挑战</button>
+                        <button class="challenge-type-btn" data-type="weekly">每周挑战</button>
+                        <button class="challenge-type-btn" data-type="custom">自定义</button>
+                    </div>
+                </div>
+
+                <!-- 快捷模板 -->
+                <div class="form-group" id="challengeTemplateGroup">
+                    <label class="form-label">快捷模板</label>
+                    <div class="challenge-template-grid" id="challengeTemplateGrid">
+                        <!-- 模板将动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 自定义挑战配置 -->
+                <div class="form-group">
+                    <label class="form-label">挑战名称</label>
+                    <input type="text" id="challengeNameInput" class="form-input" placeholder="例如：每日学习30分钟" maxlength="30">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">目标数值</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" id="challengeTargetInput" class="form-input" placeholder="30" min="1" style="flex: 1;">
+                        <select id="challengeUnitSelect" class="form-select" style="width: 120px;">
+                            <option value="minutes">分钟</option>
+                            <option value="tasks">任务</option>
+                            <option value="steps">步骤</option>
+                            <option value="times">次数</option>
+                            <option value="checkin">打卡</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select id="challengeCategorySelect" class="form-select">
+                        <option value="日常">日常</option>
+                        <option value="学习">学习</option>
+                        <option value="工作">工作</option>
+                        <option value="健康">健康</option>
+                        <option value="运动">运动</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">选择图标</label>
+                    <div class="challenge-icon-grid" id="challengeIconGrid">
+                        <!-- 图标将动态生成 -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">主题色</label>
+                    <div class="challenge-color-grid" id="challengeColorGrid">
+                        <!-- 颜色将动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 自定义周期设置 -->
+                <div class="form-group" id="customPeriodGroup" style="display: none;">
+                    <label class="form-label">重置周期（天）</label>
+                    <input type="number" id="challengePeriodInput" class="form-input" placeholder="例如：3" min="2" max="30">
+                    <p class="form-hint">设置每N天重置一次挑战进度</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelCreateChallenge">取消</button>
+                <button class="btn btn-primary" id="confirmCreateChallenge">创建挑战</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 连续记录日历弹窗 -->
+    <div class="modal-overlay" id="calendarModal">
+        <div class="modal calendar-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">连续记录</h3>
+                <button class="modal-close" id="closeCalendarModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="calendar-header">
+                    <button class="calendar-nav-btn" id="calendarPrevBtn">‹</button>
+                    <span class="calendar-month" id="calendarMonthTitle">2026年1月</span>
+                    <button class="calendar-nav-btn" id="calendarNextBtn">›</button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-day-label">日</div>
+                    <div class="calendar-day-label">一</div>
+                    <div class="calendar-day-label">二</div>
+                    <div class="calendar-day-label">三</div>
+                    <div class="calendar-day-label">四</div>
+                    <div class="calendar-day-label">五</div>
+                    <div class="calendar-day-label">六</div>
+                </div>
+                <div class="calendar-grid" id="calendarDaysGrid">
+                    <!-- 日期将动态生成 -->
+                </div>
+                <div class="calendar-legend">
+                    <div class="calendar-legend-item">
+                        <div class="calendar-legend-dot" style="background: #d1fae5;"></div>
+                        <span>低活跃</span>
+                    </div>
+                    <div class="calendar-legend-item">
+                        <div class="calendar-legend-dot" style="background: #34d399;"></div>
+                        <span>中活跃</span>
+                    </div>
+                    <div class="calendar-legend-item">
+                        <div class="calendar-legend-dot" style="background: var(--gradient-success);"></div>
+                        <span>高活跃</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成就解锁通知 -->
+    <div class="achievement-notification" id="achievementNotification">
+        <span class="achievement-icon" id="achievementIcon">🏆</span>
+        <div class="achievement-info">
+            <h4>成就解锁！</h4>
+            <h3 id="achievementName">成就名称</h3>
+        </div>
+    </div>
+
     <!-- 隐藏的文件输入 -->
     <input type="file" id="importFileInput" accept=".json" style="display:none">
 
     <script src="templates.js"></script>
     <script src="customTemplates.js"></script>
+    <script src="achievements.js"></script>
+    <script src="usageStatsManager.js"></script>
+    <script src="challengeManager.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
