@@ -135,6 +135,8 @@ const TRANSLATIONS = {
         unit_steps: '步骤',
         unit_times: '次',
         unit_checkin: '打卡',
+        count_unit_times: '次数',
+        count_unit_minutes: '时间',
 
         // 创建挑战弹窗
         create_challenge_title: '创建挑战',
@@ -400,6 +402,8 @@ const TRANSLATIONS = {
         unit_steps: 'steps',
         unit_times: 'times',
         unit_checkin: 'check-in',
+        count_unit_times: 'times',
+        count_unit_minutes: 'time',
 
         // Create Challenge Modal
         create_challenge_title: 'Create Challenge',

@@ -13,6 +13,7 @@ class ChallengeManager {
             const data = localStorage.getItem(this.storageKey);
             if (data) {
                 const parsed = JSON.parse(data);
+                this._migrateChallengeData(parsed);
                 // 检查并重置需要重置的挑战
                 this._checkAndResetChallenges(parsed);
                 return parsed;
@@ -21,6 +22,46 @@ class ChallengeManager {
             console.error('加载挑战数据失败:', e);
         }
         return this.getDefaultData();
+    }
+
+    _migrateChallengeData(data) {
+        if (!data || typeof data !== 'object') return;
+        if (!Array.isArray(data.active)) data.active = [];
+        if (!Array.isArray(data.completed)) data.completed = [];
+        if (!Array.isArray(data.achievements)) data.achievements = [];
+        if (typeof data.totalCreated !== 'number') data.totalCreated = 0;
+
+        [...data.active, ...data.completed].forEach(challenge => this._migrateChallenge(challenge));
+    }
+
+    _migrateChallenge(challenge) {
+        if (!challenge || typeof challenge !== 'object') return;
+        if (challenge.typeUnit && challenge.countUnit) return;
+
+        const legacyUnit = challenge.unit;
+        if (legacyUnit === 'tasks' || legacyUnit === 'steps') {
+            challenge.typeUnit = legacyUnit;
+            challenge.countUnit = 'times';
+            return;
+        }
+
+        if (legacyUnit === 'minutes') {
+            challenge.typeUnit = 'steps';
+            challenge.countUnit = 'minutes';
+            return;
+        }
+
+        if (legacyUnit === 'times') {
+            challenge.typeUnit = 'tasks';
+            challenge.countUnit = 'times';
+            return;
+        }
+
+        if (legacyUnit === 'checkin') {
+            // legacy: keep as manual-only
+            challenge.typeUnit = 'checkin';
+            challenge.countUnit = 'times';
+        }
     }
 
     // 获取默认数据
@@ -99,7 +140,8 @@ class ChallengeManager {
                 type: 'daily',
                 name: '每日学习',
                 target: 30,
-                unit: 'minutes',
+                typeUnit: 'steps',
+                countUnit: 'minutes',
                 category: '学习',
                 icon: '📚',
                 color: '#7c5cff',
@@ -109,7 +151,8 @@ class ChallengeManager {
                 type: 'daily',
                 name: '每日任务',
                 target: 3,
-                unit: 'tasks',
+                typeUnit: 'tasks',
+                countUnit: 'times',
                 category: '工作',
                 icon: '✅',
                 color: '#10b981',
@@ -119,7 +162,8 @@ class ChallengeManager {
                 type: 'weekly',
                 name: '每周运动',
                 target: 3,
-                unit: 'times',
+                typeUnit: 'tasks',
+                countUnit: 'times',
                 category: '健康',
                 icon: '🏃',
                 color: '#f59e0b',
@@ -129,7 +173,8 @@ class ChallengeManager {
                 type: 'daily',
                 name: '早起打卡',
                 target: 1,
-                unit: 'checkin',
+                typeUnit: 'tasks',
+                countUnit: 'times',
                 category: '日常',
                 icon: '🌅',
                 color: '#ff7eb3',
@@ -140,13 +185,16 @@ class ChallengeManager {
 
     // 创建挑战
     createChallenge(config) {
+        const { typeUnit, countUnit, unit } = this._normalizeUnitConfig(config || {});
         const challenge = {
             id: generateId(),
             type: config.type || 'daily',
             name: config.name,
             target: config.target,
             current: 0,
-            unit: config.unit, // minutes, tasks, steps, times, checkin
+            typeUnit,
+            countUnit,
+            unit: unit || null, // legacy
             category: config.category || '日常',
             startDate: Date.now(),
             endDate: config.endDate || null,
@@ -176,9 +224,32 @@ class ChallengeManager {
     }
 
     // 检查任务是否匹配挑战条件
+    _normalizeUnitConfig(config) {
+        if (config.typeUnit && config.countUnit) {
+            return { typeUnit: config.typeUnit, countUnit: config.countUnit, unit: config.unit };
+        }
+
+        const legacyUnit = config.unit;
+        if (legacyUnit === 'tasks' || legacyUnit === 'steps') {
+            return { typeUnit: legacyUnit, countUnit: 'times', unit: legacyUnit };
+        }
+        if (legacyUnit === 'minutes') {
+            return { typeUnit: 'steps', countUnit: 'minutes', unit: legacyUnit };
+        }
+        if (legacyUnit === 'times') {
+            return { typeUnit: 'tasks', countUnit: 'times', unit: legacyUnit };
+        }
+        if (legacyUnit === 'checkin') {
+            return { typeUnit: 'checkin', countUnit: 'times', unit: legacyUnit };
+        }
+
+        return { typeUnit: 'tasks', countUnit: 'times', unit: legacyUnit || null };
+    }
+
     matchesTask(challenge, task) {
         // 单位不匹配直接返回 false
-        if (challenge.unit !== 'tasks' && challenge.unit !== 'steps') {
+        const typeUnit = challenge.typeUnit || challenge.unit;
+        if (typeUnit !== 'tasks' && typeUnit !== 'steps') {
             return false;
         }
 
@@ -217,9 +288,9 @@ class ChallengeManager {
     }
 
     // 获取匹配指定任务的挑战列表
-    getMatchingChallenges(task, unit) {
+    getMatchingChallenges(task, typeUnit) {
         return this.data.active.filter(c =>
-            c.unit === unit && this.matchesTask(c, task)
+            (c.typeUnit || c.unit) === typeUnit && this.matchesTask(c, task)
         );
     }
 

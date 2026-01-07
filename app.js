@@ -338,7 +338,8 @@ class App {
         this.challengeTemplateGrid = document.getElementById('challengeTemplateGrid');
         this.challengeNameInput = document.getElementById('challengeNameInput');
         this.challengeTargetInput = document.getElementById('challengeTargetInput');
-        this.challengeUnitSelect = document.getElementById('challengeUnitSelect');
+        this.challengeTypeUnitSelect = document.getElementById('challengeTypeUnitSelect');
+        this.challengeCountUnitSelect = document.getElementById('challengeUnitSelect');
         this.challengeCategorySelect = document.getElementById('challengeCategorySelect');
         this.challengeIconGrid = document.getElementById('challengeIconGrid');
         this.challengeColorGrid = document.getElementById('challengeColorGrid');
@@ -597,7 +598,8 @@ class App {
         });
 
         // 挑战单位变化事件
-        this.challengeUnitSelect.addEventListener('change', () => this.onChallengeUnitChange());
+        this.challengeTypeUnitSelect.addEventListener('change', () => this.onChallengeUnitChange());
+        this.challengeCountUnitSelect.addEventListener('change', () => this.onChallengeUnitChange());
 
         // 关联模式选择事件
         this.matchModeSelector.querySelectorAll('input[name="matchMode"]').forEach(radio => {
@@ -698,6 +700,7 @@ class App {
         this.renderStreakDisplay();
 
         // 更新挑战列表
+        this.renderChallengeUnitSelectors();
         this.renderChallenges();
     }
 
@@ -991,7 +994,9 @@ class App {
         // 更新挑战进度（步骤类型）- 使用匹配逻辑
         const stepChallenges = this.challengeManager.getMatchingChallenges(this.currentTask, 'steps');
         stepChallenges.forEach(c => {
-            this.challengeManager.updateProgress(c.id, 1);
+            const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
+            const increment = countUnit === 'minutes' ? (stepTime / 60) : 1;
+            this.challengeManager.updateProgress(c.id, increment);
         });
         this.renderChallenges();
         this.renderStreakDisplay();
@@ -1006,8 +1011,11 @@ class App {
 
             // 更新任务类型挑战 - 使用匹配逻辑
             const taskChallenges = this.challengeManager.getMatchingChallenges(task, 'tasks');
+            const taskSeconds = this.taskManager.getTotalTime(task);
             taskChallenges.forEach(c => {
-                this.challengeManager.updateProgress(c.id, 1);
+                const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
+                const increment = countUnit === 'minutes' ? (taskSeconds / 60) : 1;
+                this.challengeManager.updateProgress(c.id, increment);
             });
 
             // 停止计时器并显示完成动画
@@ -2158,7 +2166,26 @@ class App {
 
     // ==================== 挑战系统 ====================
 
+    renderChallengeUnitSelectors() {
+        const prevTypeUnit = this.challengeTypeUnitSelect.value || 'tasks';
+        const prevCountUnit = this.challengeCountUnitSelect.value || 'times';
+
+        this.challengeTypeUnitSelect.innerHTML = `
+            <option value="tasks">${this.t('unit_tasks')}</option>
+            <option value="steps">${this.t('unit_steps')}</option>
+        `;
+        this.challengeCountUnitSelect.innerHTML = `
+            <option value="times">${this.t('count_unit_times')}</option>
+            <option value="minutes">${this.t('count_unit_minutes')}</option>
+        `;
+
+        this.challengeTypeUnitSelect.value = prevTypeUnit;
+        this.challengeCountUnitSelect.value = prevCountUnit;
+    }
+
     initChallengeUI() {
+        this.renderChallengeUnitSelectors();
+
         // 初始化图标选择器
         const icons = ['🎯', '📚', '💪', '🏃', '📖', '💻', '🎨', '🎵', '🌅', '💤', '🍎', '💧', '🧘', '✍️', '📝', '✅'];
         this.challengeIconGrid.innerHTML = icons.map(icon => `
@@ -2211,7 +2238,11 @@ class App {
                 // 填充表单
                 this.challengeNameInput.value = this.selectedTemplate.name;
                 this.challengeTargetInput.value = this.selectedTemplate.target;
-                this.challengeUnitSelect.value = this.selectedTemplate.unit;
+                const typeUnit = this.selectedTemplate.typeUnit || this.selectedTemplate.unit || 'tasks';
+                const countUnit = this.selectedTemplate.countUnit || (this.selectedTemplate.unit === 'minutes' ? 'minutes' : 'times');
+                this.challengeTypeUnitSelect.value = typeUnit;
+                this.challengeCountUnitSelect.value = countUnit;
+                this.onChallengeUnitChange();
                 this.challengeCategorySelect.value = this.selectedTemplate.category;
                 this.selectedChallengeIcon = this.selectedTemplate.icon;
                 this.selectedChallengeColor = this.selectedTemplate.color;
@@ -2237,7 +2268,18 @@ class App {
         this.challengesList.innerHTML = challenges.map(c => {
             const progress = c.target > 0 ? (c.current / c.target) : 0;
             const unitLabels = { minutes: '分钟', tasks: '任务', steps: '步骤', times: '次', checkin: '打卡' };
-            const unitLabel = unitLabels[c.unit] || c.unit;
+            const typeUnit = c.typeUnit || c.unit;
+            const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
+            const unitLabel = countUnit === 'minutes'
+                ? this.t('unit_minutes')
+                : this.t(typeUnit === 'steps' ? 'unit_steps' : 'unit_tasks');
+
+            const currentDisplay = countUnit === 'minutes'
+                ? (Math.round((c.current || 0) * 10) / 10)
+                : Math.round(c.current || 0);
+            const targetDisplay = countUnit === 'minutes'
+                ? (Math.round((c.target || 0) * 10) / 10)
+                : Math.round(c.target || 0);
 
             return `
                 <div class="challenge-card ${c.completedToday ? 'completed' : ''}"
@@ -2258,7 +2300,7 @@ class App {
                             <div class="challenge-progress-fill" style="width: ${progress * 100}%"></div>
                         </div>
                         <div class="challenge-progress-text">
-                            <span class="challenge-progress-current">${c.current}/${c.target}</span>
+                            <span class="challenge-progress-current">${currentDisplay}/${targetDisplay}</span>
                             <span class="challenge-progress-target">${unitLabel}</span>
                         </div>
                     </div>
@@ -2289,6 +2331,8 @@ class App {
         this.selectedTemplate = null;
         this.challengeNameInput.value = '';
         this.challengeTargetInput.value = '';
+        this.challengeTypeUnitSelect.value = 'tasks';
+        this.challengeCountUnitSelect.value = 'times';
         this.selectedChallengeType = 'daily';
         this.selectedChallengeIcon = '🎯';
         this.selectedChallengeColor = '#7c5cff';
@@ -2308,7 +2352,7 @@ class App {
         this.challengeColorGrid.querySelector('[data-color="#7c5cff"]')?.click();
 
         // 重置关联配置UI
-        this.taskMatchGroup.style.display = 'none';
+        this.onChallengeUnitChange();
         this.matchModeSelector.querySelectorAll('.match-mode-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.mode === 'all');
         });
@@ -2326,7 +2370,8 @@ class App {
     createChallenge() {
         const name = this.challengeNameInput.value.trim();
         const target = parseInt(this.challengeTargetInput.value);
-        const unit = this.challengeUnitSelect.value;
+        const typeUnit = this.challengeTypeUnitSelect.value;
+        const countUnit = this.challengeCountUnitSelect.value;
 
         if (!name) {
             alert('请输入挑战名称');
@@ -2346,7 +2391,7 @@ class App {
             matchTemplateIds: []
         };
 
-        if (unit === 'tasks' || unit === 'steps') {
+        if (typeUnit === 'tasks' || typeUnit === 'steps') {
             matchConfig.matchMode = this.selectedMatchMode;
 
             if (this.selectedMatchMode === 'category') {
@@ -2360,7 +2405,8 @@ class App {
             type: this.selectedChallengeType,
             name: name,
             target: target,
-            unit: unit,
+            typeUnit,
+            countUnit,
             category: this.challengeCategorySelect.value,
             icon: this.selectedChallengeIcon,
             color: this.selectedChallengeColor,
@@ -2374,8 +2420,8 @@ class App {
 
     // 单位变化时显示/隐藏关联配置
     onChallengeUnitChange() {
-        const unit = this.challengeUnitSelect.value;
-        const showTaskMatch = (unit === 'tasks' || unit === 'steps');
+        const typeUnit = this.challengeTypeUnitSelect.value;
+        const showTaskMatch = (typeUnit === 'tasks' || typeUnit === 'steps');
         this.taskMatchGroup.style.display = showTaskMatch ? 'block' : 'none';
 
         if (showTaskMatch) {
