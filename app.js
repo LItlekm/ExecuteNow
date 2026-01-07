@@ -278,6 +278,7 @@ class App {
         this.timerPaused = false;
         this.timerStartTime = null;        // 计时器开始的时间戳
         this.timerAccumulatedSeconds = 0;  // 暂停前累积的秒数
+        this.stepActionInProgress = false;
 
         // 自定义模板编辑器状态
         this.editingTemplateId = null;
@@ -1014,6 +1015,10 @@ class App {
             return;
         }
 
+        if (this.stepActionInProgress) return;
+        this.stepActionInProgress = true;
+
+        try {
         // 添加完成动画
         this.focusStepCard.classList.add('completing');
         setTimeout(() => {
@@ -1030,52 +1035,37 @@ class App {
         this.showStepCelebration(isLastStep);
 
         // 震动反馈
-        if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
-            navigator.vibrate(50);
+        try {
+            if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        } catch (e) {
+            console.error('vibrate failed:', e);
         }
 
-        // 保存当前步骤的用时
+        // 保存当前步骤的用时并先做关键状态/动画更新，避免中途异常导致“已完成但不弹庆祝/计时不停”
         const stepTime = this.stepTimerSeconds;
-        const task = this.taskManager.completeStep(this.currentTask.id, stepTime);
+        let task = null;
+        try {
+            task = this.taskManager.completeStep(this.currentTask.id, stepTime);
+        } catch (e) {
+            console.error('completeStep failed:', e);
+        }
 
-        // 记录活动
-        this.usageStats.recordActivity({
-            stepsCompleted: 1,
-            timeSpent: stepTime
-        });
+        if (!task) {
+            return;
+        }
 
-        // 更新挑战进度（步骤类型）- 使用匹配逻辑
-        const stepChallenges = this.challengeManager.getMatchingChallenges(this.currentTask, 'steps');
-        stepChallenges.forEach(c => {
-            const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
-            const increment = countUnit === 'minutes' ? (stepTime / 60) : 1;
-            this.challengeManager.updateProgress(c.id, increment);
-        });
-        this.renderChallenges();
-        this.renderStreakDisplay();
+        this.currentTask = task;
+        const isTaskCompleted = task.status === 'completed' || task.currentStep >= task.steps.length;
 
-        if (task.status === 'completed') {
-            // 任务完成 - 记录活动
-            this.usageStats.recordActivity({
-                tasksCompleted: 1,
-                stepsCompleted: 0,
-                timeSpent: 0
-            });
-
-            // 更新任务类型挑战 - 使用匹配逻辑
-            const taskChallenges = this.challengeManager.getMatchingChallenges(task, 'tasks');
-            const taskSeconds = this.taskManager.getTotalTime(task);
-            taskChallenges.forEach(c => {
-                const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
-                const increment = countUnit === 'minutes' ? (taskSeconds / 60) : 1;
-                this.challengeManager.updateProgress(c.id, increment);
-            });
-
+        if (isTaskCompleted) {
             // 停止计时器并显示完成动画
             this.stopStepTimer();
             this.showCompletionAnimation();
-            this.renderChallenges();
-            this.renderStreakDisplay();
+            // 防止完成动画期间连点
+            this.completeStepBtn.disabled = true;
+            this.skipStepBtn.disabled = true;
         } else {
             // 重置计时器开始下一步
             this.stepTimerSeconds = 0;
@@ -1084,22 +1074,82 @@ class App {
             this.startStepTimer();
             this.updateFocusMode();
         }
+
+        // 非关键路径：失败也不能阻断完成动画
+        try {
+            // 记录活动
+            this.usageStats.recordActivity({
+                stepsCompleted: 1,
+                timeSpent: stepTime
+            });
+
+            // 更新挑战进度（步骤类型）- 使用匹配逻辑
+            const stepChallenges = this.challengeManager.getMatchingChallenges(this.currentTask, 'steps');
+            stepChallenges.forEach(c => {
+                const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
+                const increment = countUnit === 'minutes' ? (stepTime / 60) : 1;
+                this.challengeManager.updateProgress(c.id, increment);
+            });
+
+            if (isTaskCompleted) {
+                // 任务完成 - 记录活动
+                this.usageStats.recordActivity({
+                    tasksCompleted: 1,
+                    stepsCompleted: 0,
+                    timeSpent: 0
+                });
+
+                // 更新任务类型挑战 - 使用匹配逻辑
+                const taskChallenges = this.challengeManager.getMatchingChallenges(task, 'tasks');
+                const taskSeconds = this.taskManager.getTotalTime(task);
+                taskChallenges.forEach(c => {
+                    const countUnit = c.countUnit || (c.unit === 'minutes' ? 'minutes' : 'times');
+                    const increment = countUnit === 'minutes' ? (taskSeconds / 60) : 1;
+                    this.challengeManager.updateProgress(c.id, increment);
+                });
+            }
+
+            this.renderChallenges();
+            this.renderStreakDisplay();
+        } catch (e) {
+            console.error('post-complete updates failed:', e);
+        }
+        } finally {
+            this.stepActionInProgress = false;
+        }
     }
 
     skipCurrentStep() {
         if (!this.currentTask || this.viewOnlyMode) return;
 
+        if (this.stepActionInProgress) return;
+        this.stepActionInProgress = true;
+
+        try {
         const coach = COACHES.find(c => c.id === this.currentTask.coachId) || COACHES[0];
         this.coachMessage.textContent = getRandomMessage(coach, 'skip');
 
-        // 保存当前步骤的用时
         const stepTime = this.stepTimerSeconds;
-        const task = this.taskManager.skipStep(this.currentTask.id, stepTime);
+        let task = null;
+        try {
+            task = this.taskManager.skipStep(this.currentTask.id, stepTime);
+        } catch (e) {
+            console.error('skipStep failed:', e);
+        }
 
-        if (task.status === 'completed') {
+        if (!task) {
+            return;
+        }
+
+        this.currentTask = task;
+        const isTaskCompleted = task.status === 'completed' || task.currentStep >= task.steps.length;
+
+        if (isTaskCompleted) {
             // 停止计时器并显示完成动画
             this.stopStepTimer();
             this.showCompletionAnimation();
+            this.completeStepBtn.disabled = true;
+            this.skipStepBtn.disabled = true;
         } else {
             // 重置计时器开始下一步
             this.stepTimerSeconds = 0;
@@ -1108,31 +1158,39 @@ class App {
             this.startStepTimer();
             setTimeout(() => this.updateFocusMode(), 500);
         }
+        } finally {
+            this.stepActionInProgress = false;
+        }
     }
 
     showCompletionAnimation() {
         const coach = COACHES.find(c => c.id === this.currentTask.coachId) || COACHES[0];
         const finishMessage = getRandomMessage(coach, 'finish');
 
-        this.completionOverlay.querySelector('.completion-text').textContent = finishMessage;
+        const completionText = this.completionOverlay?.querySelector('.completion-text');
+        if (completionText) completionText.textContent = finishMessage;
 
         // 显示时间统计
         const totalSeconds = this.taskManager.getTotalTime(this.currentTask);
-        this.totalTimeDisplay.textContent = this.formatTime(totalSeconds);
+        if (this.totalTimeDisplay) this.totalTimeDisplay.textContent = this.formatTime(totalSeconds);
 
         const completedSteps = this.currentTask.steps.filter(s => s.completed).length;
         const totalSteps = this.currentTask.steps.length;
-        this.completedStepsDisplay.textContent = `${completedSteps}/${totalSteps}`;
+        if (this.completedStepsDisplay) this.completedStepsDisplay.textContent = `${completedSteps}/${totalSteps}`;
 
-        this.completionOverlay.classList.add('active');
+        this.completionOverlay?.classList.add('active');
 
         // 震动反馈
-        if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
-            navigator.vibrate([100, 50, 100]);
+        try {
+            if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        } catch (e) {
+            console.error('vibrate failed:', e);
         }
 
         setTimeout(() => {
-            this.completionOverlay.classList.remove('active');
+            this.completionOverlay?.classList.remove('active');
             this.exitFocusMode();
         }, 3500);  // 延长显示时间以便查看统计
     }
