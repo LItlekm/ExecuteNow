@@ -3170,3 +3170,84 @@ body::before {
     background: var(--bg-secondary);
     border-radius: 4px;
 }
+
+/* 步骤生成器 */
+.step-generator {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+}
+
+.step-generator-row {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+}
+
+.step-type-selector {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
+.step-type-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-md);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.step-type-btn.active {
+    border-color: var(--accent-primary);
+    background: rgba(124, 92, 255, 0.1);
+}
+
+.step-type-btn:hover:not(.active) {
+    border-color: var(--text-muted);
+}
+
+.step-type-icon {
+    font-size: 1.5rem;
+}
+
+.step-type-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.step-type-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+#generateStepsBtn {
+    min-width: 120px;
+    height: fit-content;
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+#generateStepsBtn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+#generateStepsBtn .generate-icon {
+    transition: transform var(--transition-normal);
+}
+
+#generateStepsBtn.loading .generate-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

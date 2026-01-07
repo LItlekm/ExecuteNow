@@ -201,6 +201,29 @@
                     <input type="text" id="taskNameInput" class="form-input" placeholder="例如：写周报" maxlength="50">
                 </div>
 
+                <!-- 步骤生成器 -->
+                <div class="form-group step-generator">
+                    <label class="form-label">步骤生成</label>
+                    <div class="step-generator-row">
+                        <div class="step-type-selector">
+                            <button class="step-type-btn active" data-type="simple">
+                                <span class="step-type-icon">📋</span>
+                                <span class="step-type-name">简约</span>
+                                <span class="step-type-desc">3-5个核心步骤</span>
+                            </button>
+                            <button class="step-type-btn" data-type="detailed">
+                                <span class="step-type-icon">📝</span>
+                                <span class="step-type-name">具体</span>
+                                <span class="step-type-desc">5-8个详细步骤</span>
+                            </button>
+                        </div>
+                        <button id="generateStepsBtn" class="btn btn-secondary" disabled>
+                            <span class="generate-icon">✨</span>
+                            生成步骤
+                        </button>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">选择教练</label>
                     <div class="coach-selector" id="coachSelector">
@@ -346,6 +369,23 @@
                         <input type="checkbox" id="vibrationToggle" checked>
                         <span class="toggle-slider"></span>
                     </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">AI服务提供商</span>
+                        <span class="setting-description">选择用于生成步骤的AI服务</span>
+                    </div>
+                    <select id="aiProviderSelect" class="form-select">
+                        <option value="openai">OpenAI (GPT-3.5)</option>
+                        <option value="claude">Claude (Haiku)</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">AI API Key</span>
+                        <span class="setting-description">用于AI生成步骤功能</span>
+                    </div>
+                    <input type="password" id="aiApiKeyInput" class="form-input" placeholder="输入你的API Key">
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">

@@ -408,6 +408,8 @@ class App {
         // 创建任务弹窗
         this.createTaskModal = document.getElementById('createTaskModal');
         this.taskNameInput = document.getElementById('taskNameInput');
+        this.stepTypeSelector = document.querySelectorAll('.step-type-btn');
+        this.generateStepsBtn = document.getElementById('generateStepsBtn');
         this.coachSelector = document.getElementById('coachSelector');
         this.stepInput = document.getElementById('stepInput');
         this.addStepBtn = document.getElementById('addStepBtn');
@@ -416,6 +418,7 @@ class App {
         this.closeCreateModal = document.getElementById('closeCreateModal');
         this.cancelCreateTask = document.getElementById('cancelCreateTask');
         this.confirmCreateTask = document.getElementById('confirmCreateTask');
+        this.selectedStepType = 'simple'; // 默认简约模式
 
         // 模板弹窗
         this.templateModal = document.getElementById('templateModal');
@@ -443,6 +446,8 @@ class App {
         this.settingsModal = document.getElementById('settingsModal');
         this.defaultCoachSelect = document.getElementById('defaultCoachSelect');
         this.vibrationToggle = document.getElementById('vibrationToggle');
+        this.aiProviderSelect = document.getElementById('aiProviderSelect');
+        this.aiApiKeyInput = document.getElementById('aiApiKeyInput');
         this.clearDataBtn = document.getElementById('clearDataBtn');
         this.closeSettingsModal = document.getElementById('closeSettingsModal');
         this.languageSelector = document.getElementById('languageSelector');
@@ -507,7 +512,23 @@ class App {
         this.stepInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addStep();
         });
-        this.taskNameInput.addEventListener('input', () => this.updateCreateButton());
+        this.taskNameInput.addEventListener('input', () => {
+            this.updateCreateButton();
+            this.updateGenerateButton();
+        });
+
+        // 步骤类型选择
+        this.stepTypeSelector.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.stepTypeSelector.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedStepType = btn.dataset.type;
+            });
+        });
+
+        // 生成步骤按钮
+        this.generateStepsBtn.addEventListener('click', () => this.generateSteps());
+
         // 禁用点击空白处关闭弹窗（防止误触）
 
         // 模板弹窗
@@ -534,6 +555,12 @@ class App {
         });
         this.vibrationToggle.addEventListener('change', (e) => {
             this.settingsManager.set('vibrationEnabled', e.target.checked);
+        });
+        this.aiProviderSelect.addEventListener('change', (e) => {
+            this.settingsManager.set('aiProvider', e.target.value);
+        });
+        this.aiApiKeyInput.addEventListener('input', (e) => {
+            this.settingsManager.set('aiApiKey', e.target.value);
         });
         this.clearDataBtn.addEventListener('click', () => this.clearAllData());
 
@@ -1364,10 +1391,17 @@ class App {
         this.taskNameInput.value = '';
         this.tempSteps = [];
         this.selectedCoachId = this.settingsManager.get('defaultCoach');
+        this.selectedStepType = 'simple'; // 重置步骤类型
+
+        // 重置步骤类型按钮状态
+        this.stepTypeSelector.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === 'simple');
+        });
 
         this.renderCoachSelector(this.coachSelector, this.selectedCoachId);
         this.renderStepsList();
         this.updateCreateButton();
+        this.updateGenerateButton(); // 更新生成按钮状态
 
         this.createTaskModal.classList.add('active');
         this.taskNameInput.focus();
@@ -1444,6 +1478,186 @@ class App {
         const hasName = this.taskNameInput.value.trim().length > 0;
         const hasSteps = this.tempSteps.length > 0;
         this.confirmCreateTask.disabled = !(hasName && hasSteps);
+    }
+
+    updateGenerateButton() {
+        const hasName = this.taskNameInput.value.trim().length > 0;
+        this.generateStepsBtn.disabled = !hasName;
+    }
+
+    async generateSteps() {
+        const taskName = this.taskNameInput.value.trim();
+        if (!taskName) return;
+
+        // 显示加载状态
+        this.generateStepsBtn.classList.add('loading');
+        this.generateStepsBtn.disabled = true;
+
+        try {
+            // 1. 优先尝试本地模板匹配
+            const matchedSteps = this.matchLocalTemplate(taskName);
+
+            if (matchedSteps) {
+                // 本地匹配成功
+                this.applyGeneratedSteps(matchedSteps);
+                this.showToast('已基于模板生成步骤', 'success');
+            } else {
+                // 2. 本地匹配失败，调用AI API
+                const aiSteps = await this.fetchAIGeneratedSteps(taskName, this.selectedStepType);
+                this.applyGeneratedSteps(aiSteps);
+                this.showToast('已通过AI生成步骤', 'success');
+            }
+        } catch (error) {
+            console.error('生成步骤失败:', error);
+            this.showToast(error.message || '生成步骤失败，请手动添加', 'error');
+        } finally {
+            // 恢复按钮状态
+            this.generateStepsBtn.classList.remove('loading');
+            this.updateGenerateButton();
+        }
+    }
+
+    matchLocalTemplate(taskName) {
+        const normalizedName = taskName.toLowerCase().trim();
+
+        // 1. 精确匹配
+        let matched = TASK_TEMPLATES.find(t =>
+            t.name.toLowerCase() === normalizedName
+        );
+        if (matched) return this.adjustStepsForType(matched.steps);
+
+        // 2. 包含匹配
+        matched = TASK_TEMPLATES.find(t =>
+            normalizedName.includes(t.name.toLowerCase()) ||
+            t.name.toLowerCase().includes(normalizedName)
+        );
+        if (matched) return this.adjustStepsForType(matched.steps);
+
+        // 3. 关键词匹配表
+        const keywordMap = {
+            '日常': ['起床', '睡觉', '洗漱', '做饭', '清洁', '整理', '打扫'],
+            '工作': ['工作', '报告', '文档', '会议', '邮件', '开会', '写作'],
+            '学习': ['学习', '读书', '阅读', '复习', '作业', '笔记'],
+            '健康': ['运动', '锻炼', '健身', '跑步', '冥想', '瑜伽']
+        };
+
+        for (const [category, keywords] of Object.entries(keywordMap)) {
+            if (keywords.some(kw => normalizedName.includes(kw))) {
+                // 找到该分类下的第一个模板
+                matched = TASK_TEMPLATES.find(t => t.category === category);
+                if (matched) return this.adjustStepsForType(matched.steps);
+            }
+        }
+
+        return null; // 未匹配到
+    }
+
+    adjustStepsForType(steps) {
+        if (this.selectedStepType === 'simple') {
+            // 简约模式：取核心步骤（最多5个）
+            if (steps.length <= 5) return steps;
+            // 智能选取：首、中、尾的关键步骤
+            const interval = Math.floor(steps.length / 4);
+            return [
+                steps[0],
+                steps[interval],
+                steps[interval * 2],
+                steps[interval * 3],
+                steps[steps.length - 1]
+            ];
+        }
+        // 具体模式：返回所有步骤
+        return steps;
+    }
+
+    async fetchAIGeneratedSteps(taskName, stepType) {
+        const apiKey = this.settingsManager.get('aiApiKey');
+        const apiProvider = this.settingsManager.get('aiProvider') || 'openai';
+
+        if (!apiKey) {
+            throw new Error('未配置API Key，请前往设置页面配置');
+        }
+
+        const stepCount = stepType === 'simple' ? '3-5' : '5-8';
+        const prompt = `请为任务"${taskName}"生成${stepCount}个具体可执行的步骤。
+要求：
+1. 每个步骤都是简短的行动指令（不超过100字符）
+2. 步骤从简单到复杂递进
+3. 步骤要足够具体，能立即执行
+4. 只返回步骤内容，每行一个步骤，不需要编号`;
+
+        let response;
+        if (apiProvider === 'openai') {
+            response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`OpenAI API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            const steps = content
+                .split('\n')
+                .filter(s => s.trim())
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 0);
+
+            return steps;
+        } else if (apiProvider === 'claude') {
+            response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 1024,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Claude API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.content[0].text;
+            const steps = content
+                .split('\n')
+                .filter(s => s.trim())
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 0);
+
+            return steps;
+        } else {
+            throw new Error('不支持的API提供商');
+        }
+    }
+
+    applyGeneratedSteps(steps) {
+        // 询问是否替换现有步骤（如果已有步骤）
+        if (this.tempSteps.length > 0) {
+            if (!confirm('当前已有步骤，是否替换为生成的步骤？')) {
+                return;
+            }
+        }
+
+        this.tempSteps = [...steps];
+        this.renderStepsList();
+        this.updateCreateButton();
     }
 
     createTask() {
@@ -1602,6 +1816,8 @@ class App {
 
         this.defaultCoachSelect.value = this.settingsManager.get('defaultCoach');
         this.vibrationToggle.checked = this.settingsManager.get('vibrationEnabled');
+        this.aiProviderSelect.value = this.settingsManager.get('aiProvider') || 'openai';
+        this.aiApiKeyInput.value = this.settingsManager.get('aiApiKey') || '';
 
         this.settingsModal.classList.add('active');
     }
