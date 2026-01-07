@@ -2667,7 +2667,13 @@ class App {
                         <div class="challenge-info">
                             <div class="challenge-name">${c.name}</div>
                             <div class="challenge-meta">
-                                <span class="challenge-category">${(c.matchMode === 'specific') ? `${c.category} · 模板` : (c.matchMode === 'category') ? `${c.category} · 分类` : '全部'}</span>
+                                <span class="challenge-category">${
+                                    (c.matchMode === 'specific')
+                                        ? `模板：${(c.matchTemplateSnapshot && c.matchTemplateSnapshot.name) ? c.matchTemplateSnapshot.name : ((c.matchTemplateIds && c.matchTemplateIds[0]) ? (this.getTemplateById(c.matchTemplateIds[0])?.name || '未知模板') : '未知模板')}${c.category ? `（${c.category}）` : ''}`
+                                        : (c.matchMode === 'category')
+                                            ? `分类：${c.category || '全部'}`
+                                            : '全部'
+                                }</span>
                                 ${c.streak > 0 ? `<span class="challenge-streak">🔥 ${c.streak}天</span>` : ''}
                             </div>
                         </div>
@@ -2788,6 +2794,15 @@ class App {
                 if (!matchConfig.matchTemplateIds.length) {
                     alert('请选择一个模板');
                     return;
+                }
+                const selectedTemplate = this.getTemplateById(matchConfig.matchTemplateIds[0]);
+                if (selectedTemplate) {
+                    matchConfig.matchTemplateSnapshot = {
+                        id: selectedTemplate.id,
+                        name: selectedTemplate.name,
+                        category: selectedTemplate.category || '',
+                        icon: selectedTemplate.icon || ''
+                    };
                 }
             }
         }

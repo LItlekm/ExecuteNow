@@ -210,7 +210,8 @@ class ChallengeManager {
             matchMode: config.matchMode || 'all', // all, category, specific
             matchCategories: config.matchCategories || [], // category模式：匹配的分类列表
             matchTaskIds: config.matchTaskIds || [], // specific模式：匹配的任务ID
-            matchTemplateIds: config.matchTemplateIds || [] // specific模式：匹配的模板ID
+            matchTemplateIds: config.matchTemplateIds || [], // specific模式：匹配的模板ID
+            matchTemplateSnapshot: config.matchTemplateSnapshot || null
         };
 
         this.data.active.push(challenge);
@@ -372,7 +373,7 @@ class ChallengeManager {
         }
 
         // 只允许更新部分字段
-        const allowedFields = ['name', 'target', 'icon', 'color', 'reminders', 'endDate', 'matchMode', 'matchCategories', 'matchTaskIds', 'matchTemplateIds'];
+        const allowedFields = ['name', 'target', 'icon', 'color', 'reminders', 'endDate', 'matchMode', 'matchCategories', 'matchTaskIds', 'matchTemplateIds', 'matchTemplateSnapshot'];
         allowedFields.forEach(field => {
             if (updates[field] !== undefined) {
                 challenge[field] = updates[field];
