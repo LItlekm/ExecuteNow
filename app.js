@@ -770,7 +770,22 @@ class App {
         this.calendarNextBtn.addEventListener('click', () => this.changeCalendarMonth(1));
 
         // 应用内事件监听
-        window.addEventListener('app:achievement-unlock', (e) => this.showAchievementNotification(e.detail.achievement));
+        window.addEventListener('app:achievement-unlock', (e) => {
+            const achievement = e?.detail?.achievement;
+            if (!achievement) return;
+
+            this.showAchievementNotification(achievement);
+
+            // 统一用 usageStats 记录解锁状态（成就面板依赖此数据）
+            if (achievement.id && this.usageStats?.markAchievementUnlocked) {
+                this.usageStats.markAchievementUnlocked(achievement.id, achievement.unlockedAt || Date.now());
+            }
+
+            // 若成就面板正在打开，立即刷新
+            if (this.achievementsModal?.classList.contains('active')) {
+                this.renderAchievements();
+            }
+        });
         window.addEventListener('app:challenge-complete', (e) => this.handleChallengeComplete(e.detail.challenge));
 
         // 初始化挑战相关UI
@@ -3331,7 +3346,42 @@ class App {
 
     // ==================== 成就展示界面 ====================
 
+    syncAchievementUnlocks() {
+        if (!this.usageStats?.markAchievementUnlocked) return;
+
+        const now = Date.now();
+
+        // 任务完成成就：根据实际任务数据回填（避免仅依赖当日 activity）
+        const completedTasks = this.taskManager.getAllTasks().filter(t => t.status === 'completed').length;
+        [
+            { target: 10, id: 'tasks_10' },
+            { target: 50, id: 'tasks_50' },
+            { target: 100, id: 'tasks_100' },
+            { target: 500, id: 'tasks_500' }
+        ].forEach(({ target, id }) => {
+            if (completedTasks >= target) {
+                this.usageStats.markAchievementUnlocked(id, now);
+            }
+        });
+
+        // 连续使用成就：根据当前连续天数回填
+        const currentStreak = this.usageStats.stats?.currentStreak || 0;
+        [3, 7, 14, 30, 60, 100, 365].forEach(target => {
+            if (currentStreak >= target) {
+                this.usageStats.markAchievementUnlocked(`streak_${target}`, now);
+            }
+        });
+
+        // 挑战成就：ChallengeManager 内部存储，回写到 usageStats 供成就面板展示
+        const challengeAchievements = this.challengeManager?.getAchievements?.() || [];
+        challengeAchievements.forEach(a => {
+            if (!a?.id) return;
+            this.usageStats.markAchievementUnlocked(a.id, a.unlockedAt || now);
+        });
+    }
+
     showAchievementsModal() {
+        this.syncAchievementUnlocks();
         this.renderAchievements();
         this.achievementsModal.classList.add('active');
         // 更新弹窗内的i18n文本

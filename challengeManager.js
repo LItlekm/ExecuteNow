@@ -469,15 +469,15 @@ class ChallengeManager {
 
     // 解锁���就
     _unlockAchievement(achievement) {
-        this.data.achievements.push({
-            ...achievement,
-            unlockedAt: Date.now()
-        });
+        const unlockedAt = Date.now();
+        const achievementWithTime = { ...achievement, unlockedAt };
+
+        this.data.achievements.push(achievementWithTime);
         this.saveToStorage();
 
         // 应用内事件
         window.dispatchEvent(new CustomEvent('app:achievement-unlock', {
-            detail: { achievement }
+            detail: { achievement: achievementWithTime }
         }));
     }
 

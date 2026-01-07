@@ -7,6 +7,54 @@ class UsageStatsManager {
         this.notificationManager = new NotificationManager();
     }
 
+    isAchievementUnlocked(achievementId) {
+        const unlockedKey = `unlocked_${achievementId}`;
+        return !!this.stats[unlockedKey];
+    }
+
+    markAchievementUnlocked(achievementId, unlockedAt = Date.now()) {
+        const unlockedKey = `unlocked_${achievementId}`;
+        if (this.stats[unlockedKey]) return false;
+
+        this.stats[unlockedKey] = true;
+        this.stats[`${unlockedKey}_time`] = unlockedAt;
+        this.saveToStorage();
+        return true;
+    }
+
+    unlockAchievement(achievementId, options = {}) {
+        const { unlockedAt = Date.now(), showNotification = true } = options;
+        const newlyUnlocked = this.markAchievementUnlocked(achievementId, unlockedAt);
+        if (!newlyUnlocked) return { unlocked: false };
+
+        const achievement =
+            (typeof getAchievementById === 'function' ? getAchievementById(achievementId) : null) || {
+                id: achievementId,
+                name: achievementId,
+                icon: '🏆',
+                description: ''
+            };
+        const achievementWithTime = { ...achievement, unlockedAt };
+
+        try {
+            window.dispatchEvent(new CustomEvent('app:achievement-unlock', {
+                detail: { achievement: achievementWithTime }
+            }));
+        } catch (e) {
+            console.error('dispatch achievement unlock failed:', e);
+        }
+
+        if (showNotification) {
+            try {
+                this.notificationManager.showAchievement(achievementWithTime);
+            } catch (e) {
+                console.error('showAchievement failed:', e);
+            }
+        }
+
+        return { unlocked: true, achievement: achievementWithTime };
+    }
+
     // 从 localStorage 加载数据
     loadFromStorage() {
         try {
@@ -65,6 +113,7 @@ class UsageStatsManager {
 
         // 检查成就
         this._checkStreakAchievements();
+        this._checkTaskAchievements();
 
         return {
             isNewDay,
@@ -150,9 +199,30 @@ class UsageStatsManager {
         const achievementKey = `streak_${streak}`;
 
         // 检查是否需要解锁成就
-        if ([3, 7, 30, 100].includes(streak)) {
-            this._unlockAchievement(achievementKey, streak);
+        if ([3, 7, 14, 30, 60, 100, 365].includes(streak)) {
+            this.unlockAchievement(achievementKey);
         }
+    }
+
+    _checkTaskAchievements() {
+        const records = this.stats.dailyRecord || {};
+        const totalTasksCompleted = Object.values(records).reduce((sum, record) => {
+            if (!record) return sum;
+            return sum + (record.tasksCompleted || 0);
+        }, 0);
+
+        const thresholds = [
+            { target: 10, id: 'tasks_10' },
+            { target: 50, id: 'tasks_50' },
+            { target: 100, id: 'tasks_100' },
+            { target: 500, id: 'tasks_500' }
+        ];
+
+        thresholds.forEach(({ target, id }) => {
+            if (totalTasksCompleted >= target) {
+                this.unlockAchievement(id, { showNotification: false });
+            }
+        });
     }
 
     // 解锁成就
