@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>任务拆解助手</title>
+    <title data-i18n="app_title">任务拆解助手</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- 主界面 -->
     <div class="app-container" id="mainView">
         <header class="header">
-            <h1 class="title">任务拆解助手</h1>
+            <h1 class="title" data-i18n="app_title">任务拆解助手</h1>
             <div class="header-actions">
                 <button id="settingsBtn" class="btn btn-icon" title="设置">
                     <span>⚙️</span>
@@ -30,19 +30,19 @@
                             <span class="streak-flame" id="streakFlame">🔥</span>
                         </div>
                         <div class="streak-info">
-                            <div class="streak-number"><span id="currentStreak">0</span> 天</div>
-                            <div class="streak-label">连续使用</div>
+                            <div class="streak-number"><span id="currentStreak">0</span> <span data-i18n="days">天</span></div>
+                            <div class="streak-label" data-i18n="streak_days">连续使用</div>
                             <div class="freeze-streak-tokens" id="freezeTokens"></div>
                         </div>
                     </div>
                     <div class="streak-stats">
                         <div class="streak-stat">
                             <div class="streak-stat-value" id="todayTasks">0</div>
-                            <div class="streak-stat-label">今日完成</div>
+                            <div class="streak-stat-label" data-i18n="today_completed">今日完成</div>
                         </div>
                         <div class="streak-stat">
-                            <div class="streak-stat-value">最高 <span id="longestStreak">0</span></div>
-                            <div class="streak-stat-label">天</div>
+                            <div class="streak-stat-value"><span data-i18n="longest_record">最高</span> <span id="longestStreak">0</span></div>
+                            <div class="streak-stat-label" data-i18n="days">天</div>
                         </div>
                     </div>
                 </div>
@@ -52,30 +52,30 @@
             <section class="quick-actions">
                 <button id="createTaskBtn" class="action-card action-card-primary">
                     <span class="action-icon">✨</span>
-                    <span class="action-text">创���新任务</span>
+                    <span class="action-text" data-i18n="create_new_task">创建新任务</span>
                 </button>
                 <button id="useTemplateBtn" class="action-card action-card-secondary">
                     <span class="action-icon">📋</span>
-                    <span class="action-text">使用模板</span>
+                    <span class="action-text" data-i18n="use_template">使用模板</span>
                 </button>
             </section>
 
             <!-- 挑战系统 -->
             <section class="challenges-section" id="challengesSection">
                 <div class="challenges-header">
-                    <h2 class="challenges-title">今日挑战</h2>
+                    <h2 class="challenges-title" data-i18n="challenges_title">今日挑战</h2>
                     <button class="create-challenge-btn" id="createChallengeBtn">
                         <span>+</span>
-                        <span>创建挑战</span>
+                        <span data-i18n="create_challenge">创建挑战</span>
                     </button>
                 </div>
                 <div class="challenges-list" id="challengesList">
                     <div class="challenge-empty" id="challengesEmpty">
                         <span class="challenge-empty-icon">🎯</span>
-                        <p class="challenge-empty-text">还没有挑战</p>
-                        <p class="challenge-empty-hint">创建一个挑战，养成好习惯</p>
+                        <p class="challenge-empty-text" data-i18n="no_challenges">还没有挑战</p>
+                        <p class="challenge-empty-hint" data-i18n="no_challenges_hint">创建一个挑战，养成好习惯</p>
                         <button class="btn btn-primary" style="margin-top: 8px;" onclick="document.getElementById('createChallengeBtn').click()">
-                            + 创建挑战
+                            + <span data-i18n="create_challenge">创建挑战</span>
                         </button>
                     </div>
                 </div>
@@ -336,8 +336,8 @@
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
-                        <span class="setting-label">完成震动反馈</span>
-                        <span class="setting-description">完成步骤时震动提示</span>
+                        <span class="setting-label" data-i18n="vibration">完成震动反馈</span>
+                        <span class="setting-description" data-i18n="vibration_hint">完成步骤时震动提示</span>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="vibrationToggle" checked>
@@ -346,10 +346,26 @@
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
-                        <span class="setting-label">清除所有数据</span>
-                        <span class="setting-description">删除所有任务和设置</span>
+                        <span class="setting-label" data-i18n="language">语言</span>
+                        <span class="setting-description" data-i18n="language_hint">选择界面语言</span>
                     </div>
-                    <button id="clearDataBtn" class="btn btn-danger btn-sm">清除</button>
+                    <div class="language-selector" id="languageSelector">
+                        <label class="lang-option">
+                            <input type="radio" name="language" value="zh" checked>
+                            <span data-i18n="language_zh">中文</span>
+                        </label>
+                        <label class="lang-option">
+                            <input type="radio" name="language" value="en">
+                            <span>English</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label" data-i18n="clear_data">清除所有数据</span>
+                        <span class="setting-description" data-i18n="clear_data_hint">删除所有任务和设置</span>
+                    </div>
+                    <button id="clearDataBtn" class="btn btn-danger btn-sm" data-i18n="confirm_clear">清除</button>
                 </div>
             </div>
         </div>
@@ -593,6 +609,7 @@
     <script src="achievements.js"></script>
     <script src="usageStatsManager.js"></script>
     <script src="challengeManager.js"></script>
+    <script src="i18n.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

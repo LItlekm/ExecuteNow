@@ -1832,6 +1832,53 @@ body::before {
     transform: translateX(24px);
 }
 
+/* ==================== 语言选择器 ==================== */
+
+.language-selector {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.lang-option {
+    cursor: pointer;
+    position: relative;
+}
+
+.lang-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.lang-option span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+    min-width: 70px;
+}
+
+.lang-option:hover span {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+.lang-option input[type="radio"]:checked + span {
+    background: var(--gradient-secondary);
+    border-color: transparent;
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
 /* ==================== 响应式 ==================== */
 
 @media (max-width: 400px) {

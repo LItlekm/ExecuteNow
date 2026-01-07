@@ -242,6 +242,9 @@ class App {
         // 共享通知管理器
         this.challengeManager.notificationManager = this.usageStats.notificationManager;
 
+        // 语言系统
+        this.i18n = window.i18n;
+
         // 当前状态
         this.currentTask = null;
         this.selectedCoachId = null;
@@ -412,6 +415,8 @@ class App {
         this.vibrationToggle = document.getElementById('vibrationToggle');
         this.clearDataBtn = document.getElementById('clearDataBtn');
         this.closeSettingsModal = document.getElementById('closeSettingsModal');
+        this.languageSelector = document.getElementById('languageSelector');
+
 
         // 删除确认弹窗
         this.deleteConfirmModal = document.getElementById('deleteConfirmModal');
@@ -512,6 +517,19 @@ class App {
         });
         this.clearDataBtn.addEventListener('click', () => this.clearAllData());
 
+        // 语言切换
+        const langInputs = this.languageSelector.querySelectorAll('input[name="language"]');
+        langInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.switchLanguage(e.target.value);
+                }
+            });
+        });
+
+        // 初始化语言选择器状态
+        this.initLanguageSelector();
+
         // 删除确认弹窗
         this.closeDeleteModal.addEventListener('click', () => this.hideDeleteConfirmModal());
         this.cancelDelete.addEventListener('click', () => this.hideDeleteConfirmModal());
@@ -601,6 +619,87 @@ class App {
         const theme = this.settingsManager.get('theme');
         const icon = this.themeToggle.querySelector('.theme-icon');
         icon.textContent = theme === 'light' ? '🌙' : '☀️';
+    }
+
+    // ==================== 国际化 ====================
+
+    initLanguageSelector() {
+        const currentLang = this.i18n.get();
+        const langInputs = this.languageSelector.querySelectorAll('input[name="language"]');
+        langInputs.forEach(input => {
+            input.checked = input.value === currentLang;
+        });
+    }
+
+    switchLanguage(lang) {
+        this.i18n.set(lang);
+        this.updateUIText();
+        this.render(); // 重新渲染界面
+    }
+
+    updateUIText() {
+        // 更新所有带有 data-i18n 属性的元素
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = this.i18n.t(key);
+            el.textContent = text;
+        });
+
+        // 更新页面标题
+        document.title = this.i18n.t('app_title');
+
+        // 更新 HTML lang 属性
+        const currentLang = this.i18n.get();
+        document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
+
+        // 更新特殊元素的文本
+        this.updateTranslatableContent();
+    }
+
+    updateTranslatableContent() {
+        // 更新任务计数
+        const tasks = this.taskManager.getAllTasks();
+        const countText = this.i18n.t('tasks_count', { count: tasks.length });
+        this.taskCount.textContent = countText;
+
+        // 更新按钮文本
+        this.createTaskBtn.querySelector('.action-text').textContent = this.i18n.t('create_new_task');
+        this.useTemplateBtn.querySelector('.action-text').textContent = this.i18n.t('use_template');
+
+        // 更新设置面板标题
+        document.querySelector('#settingsModal .modal-title').textContent = this.i18n.t('settings');
+
+        // 更新教练选择器的选项
+        this.updateCoachSelectorOptions();
+
+        // 更新空状态文本
+        this.updateEmptyStateText();
+
+        // 更新连续天数显示
+        this.renderStreakDisplay();
+
+        // 更新挑战列表
+        this.renderChallenges();
+    }
+
+    updateCoachSelectorOptions() {
+        const coaches = this.i18n.getAllCoaches();
+        this.defaultCoachSelect.innerHTML = coaches.map(coach =>
+            `<option value="${coach.id}">${coach.name}</option>`
+        ).join('');
+    }
+
+    updateEmptyStateText() {
+        const emptyTitle = this.emptyState.querySelector('.empty-title');
+        const emptyHint = this.emptyState.querySelector('.empty-hint');
+        if (emptyTitle) emptyTitle.textContent = this.i18n.t('empty_state_title');
+        if (emptyHint) emptyHint.textContent = this.i18n.t('empty_state_hint');
+    }
+
+    // 获取翻译文本的辅助方法
+    t(key, params) {
+        return this.i18n.t(key, params);
     }
 
     // ==================== 渲染 ====================
