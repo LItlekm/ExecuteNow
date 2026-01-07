@@ -722,12 +722,12 @@ class App {
 
         // 更新按钮状态
         if (this.viewOnlyMode) {
-            this.completeStepBtn.innerHTML = '<span class="btn-icon">▶</span><span>下一步</span>';
+            this.completeStepBtn.innerHTML = '<span>下一步</span>';
             this.completeStepBtn.disabled = currentStep >= totalSteps - 1;
             this.skipStepBtn.style.display = 'none';
             this.shelveTaskBtn.style.display = 'none';
         } else {
-            this.completeStepBtn.innerHTML = '<span class="btn-icon">✓</span><span>完成这一步</span>';
+            this.completeStepBtn.innerHTML = '<span>完成这一步</span>';
             this.completeStepBtn.disabled = currentStep >= totalSteps;
             this.skipStepBtn.style.display = '';
             this.shelveTaskBtn.style.display = '';

@@ -1009,69 +1009,6 @@ body::before {
 
 /* ==================== 完成按钮庆祝动画系统 ==================== */
 
-/* 勾选图标容器 */
-.btn-check-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 10px;
-}
-
-.btn-check-icon {
-    position: relative;
-    z-index: 2;
-    /* 默认隐藏，等待动画触发 */
-    opacity: 0;
-    transform: scale(0);
-    transition: none;
-}
-
-/* 勾选图标显示状态 */
-.btn-complete.celebrating .btn-check-icon {
-    animation: checkIconPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes checkIconPop {
-    0% {
-        opacity: 0;
-        transform: scale(0) rotate(-45deg);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.3) rotate(10deg);
-    }
-    75% {
-        transform: scale(0.9) rotate(-5deg);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-    }
-}
-
-/* 圆圈轨道 - 简化 */
-.btn-check-icon .check-circle {
-    opacity: 0.5;
-}
-
-/* 勾选路径 */
-.btn-check-icon .check-path {
-    filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
-}
-
-/* 光爆效果元素 */
-.check-burst {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(56, 239, 125, 0.6) 0%, transparent 70%);
-    opacity: 0;
-    transform: scale(0);
-    pointer-events: none;
-}
-
 /* 按钮文字 */
 .btn-text {
     position: relative;
@@ -1121,26 +1058,6 @@ body::before {
     0% { transform: scale(1); }
     40% { transform: scale(0.95); }
     100% { transform: scale(1); }
-}
-
-/* 光爆效果 */
-.btn-complete.celebrating .check-burst {
-    animation: burstEffect 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes burstEffect {
-    0% {
-        opacity: 0;
-        transform: scale(0);
-    }
-    30% {
-        opacity: 1;
-        transform: scale(1.2);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(2.5);
-    }
 }
 
 /* 光泽流动 */
