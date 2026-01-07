@@ -1650,10 +1650,9 @@ class App {
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'glm-4-flash',
+                    model: 'glm-4.7',
                     messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.7,
-                    max_tokens: 1024
+                    temperature: 0.7
                 })
             });
 
