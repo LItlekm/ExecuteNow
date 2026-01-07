@@ -933,6 +933,17 @@ body::before {
     z-index: 1;
 }
 
+/* 步骤耗时显示 */
+.step-time-spent {
+    display: none;
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 /* 教练消息 */
 .coach-message {
     display: flex;
@@ -2486,7 +2497,7 @@ body::before {
     content: '✓';
     position: absolute;
     top: var(--spacing-sm);
-    right: var(--spacing-sm);
+    right: 48px;
     width: 28px;
     height: 28px;
     background: var(--gradient-success);
@@ -2498,6 +2509,29 @@ body::before {
     font-size: 0.9rem;
     font-weight: 700;
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* 挑战删除按钮 */
+.challenge-delete-btn {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    color: var(--text-muted);
+    z-index: 1;
+}
+
+.challenge-delete-btn:hover {
+    background: var(--color-danger);
+    color: white;
 }
 
 .challenge-header {

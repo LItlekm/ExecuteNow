@@ -386,6 +386,7 @@ class App {
         this.totalStepNum = document.getElementById('totalStepNum');
         this.progressFill = document.getElementById('progressFill');
         this.stepContent = document.getElementById('stepContent');
+        this.stepTimeSpent = document.getElementById('stepTimeSpent');
         this.coachAvatar = document.getElementById('coachAvatar');
         this.coachMessage = document.getElementById('coachMessage');
         this.focusStepCard = document.getElementById('focusStepCard');
@@ -552,7 +553,13 @@ class App {
         // 删除确认弹窗
         this.closeDeleteModal.addEventListener('click', () => this.hideDeleteConfirmModal());
         this.cancelDelete.addEventListener('click', () => this.hideDeleteConfirmModal());
-        this.confirmDelete.addEventListener('click', () => this.deleteTask());
+        this.confirmDelete.addEventListener('click', () => {
+            if (this.pendingDeleteTaskId) {
+                this.deleteTask();
+            } else if (this.pendingDeleteChallengeId) {
+                this.deleteChallenge();
+            }
+        });
         // 禁用点击空白处关闭弹窗（防止误触）
 
         // 自定义模板 - 标签页切换
@@ -921,8 +928,22 @@ class App {
         // 更新步骤内容
         if (currentStep < totalSteps) {
             this.stepContent.textContent = task.steps[currentStep].content;
+
+            // 显示步骤耗时（仅在查看模式且有时间数据时）
+            if (this.viewOnlyMode) {
+                const timeSpent = task.steps[currentStep].timeSpent || 0;
+                if (timeSpent > 0) {
+                    this.stepTimeSpent.textContent = `⏱ ${this.formatTime(timeSpent)}`;
+                    this.stepTimeSpent.style.display = 'block';
+                } else {
+                    this.stepTimeSpent.style.display = 'none';
+                }
+            } else {
+                this.stepTimeSpent.style.display = 'none';
+            }
         } else {
             this.stepContent.textContent = '全部完成！';
+            this.stepTimeSpent.style.display = 'none';
         }
 
         // 更新教练消息
@@ -2037,11 +2058,19 @@ class App {
 
     showDeleteConfirmModal(taskId) {
         this.pendingDeleteTaskId = taskId;
+        this.pendingDeleteChallengeId = null;
+        this.deleteConfirmModal.classList.add('active');
+    }
+
+    showDeleteChallengeConfirmModal(challengeId) {
+        this.pendingDeleteChallengeId = challengeId;
+        this.pendingDeleteTaskId = null;
         this.deleteConfirmModal.classList.add('active');
     }
 
     hideDeleteConfirmModal() {
         this.pendingDeleteTaskId = null;
+        this.pendingDeleteChallengeId = null;
         this.deleteConfirmModal.classList.remove('active');
     }
 
@@ -2050,6 +2079,14 @@ class App {
             this.taskManager.deleteTask(this.pendingDeleteTaskId);
             this.hideDeleteConfirmModal();
             this.render();
+        }
+    }
+
+    deleteChallenge() {
+        if (this.pendingDeleteChallengeId) {
+            this.challengeManager.deleteChallenge(this.pendingDeleteChallengeId);
+            this.hideDeleteConfirmModal();
+            this.renderChallenges();
         }
     }
 
@@ -2326,6 +2363,7 @@ class App {
                 <div class="challenge-card ${c.completedToday ? 'completed' : ''}"
                      data-challenge-id="${c.id}"
                      style="--challenge-color: ${c.color}; --challenge-color-light: ${c.color}20">
+                    <button class="challenge-delete-btn" data-action="delete" title="删除">🗑</button>
                     <div class="challenge-header">
                         <div class="challenge-icon">${c.icon}</div>
                         <div class="challenge-info">
@@ -2348,6 +2386,15 @@ class App {
                 </div>
             `;
         }).join('');
+
+        // 绑定删除按钮事件
+        this.challengesList.querySelectorAll('.challenge-delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const challengeId = btn.closest('.challenge-card').dataset.challengeId;
+                this.showDeleteChallengeConfirmModal(challengeId);
+            });
+        });
 
         // 点击卡片显示详情（可选功能）
         this.challengesList.querySelectorAll('.challenge-card').forEach(el => {
