@@ -12,6 +12,9 @@
         <header class="header">
             <h1 class="title" data-i18n="app_title">任务拆解助手</h1>
             <div class="header-actions">
+                <button id="achievementsBtn" class="btn btn-icon" title="成就">
+                    <span>🏆</span>
+                </button>
                 <button id="settingsBtn" class="btn btn-icon" title="设置">
                     <span>⚙️</span>
                 </button>
@@ -704,6 +707,74 @@
         <div class="achievement-info">
             <h4>成就解锁！</h4>
             <h3 id="achievementName">成就名称</h3>
+        </div>
+    </div>
+
+    <!-- 成就展示弹窗 -->
+    <div class="modal-overlay" id="achievementsModal">
+        <div class="modal modal-large achievements-modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="achievements_title">我的成就</h3>
+                <button class="modal-close" id="closeAchievementsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 成就统计概览 -->
+                <div class="achievements-overview">
+                    <div class="achievements-stat">
+                        <span class="stat-icon">🏆</span>
+                        <div class="stat-content">
+                            <span class="stat-value" id="unlockedCount">0</span>
+                            <span class="stat-label" data-i18n="achievements_unlocked">已解锁</span>
+                        </div>
+                    </div>
+                    <div class="achievements-stat">
+                        <span class="stat-icon">📊</span>
+                        <div class="stat-content">
+                            <span class="stat-value" id="achievementsProgress">0%</span>
+                            <span class="stat-label" data-i18n="achievements_progress">完成度</span>
+                        </div>
+                    </div>
+                    <div class="achievements-stat">
+                        <span class="stat-icon">💎</span>
+                        <div class="stat-content">
+                            <span class="stat-value" id="rarestAchievement">-</span>
+                            <span class="stat-label" data-i18n="rarest_achievement">最稀有</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成就筛选器 -->
+                <div class="achievements-filters">
+                    <div class="filter-group">
+                        <label data-i18n="filter_by">筛选：</label>
+                        <div class="filter-tabs" id="achievementsFilterTabs">
+                            <button class="filter-tab active" data-filter="all" data-i18n="filter_all">全部</button>
+                            <button class="filter-tab" data-filter="unlocked" data-i18n="filter_unlocked">已解锁</button>
+                            <button class="filter-tab" data-filter="locked" data-i18n="filter_locked">未解锁</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label data-i18n="sort_by">排序：</label>
+                        <select class="form-select filter-select" id="achievementsSortSelect">
+                            <option value="category" data-i18n="sort_category">按类别</option>
+                            <option value="rarity" data-i18n="sort_rarity">按稀有度</option>
+                            <option value="time" data-i18n="sort_time">按解锁时间</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 成就列表 -->
+                <div class="achievements-list" id="achievementsList">
+                    <!-- 成就卡片将动态生成 -->
+                </div>
+
+                <!-- 空状态 -->
+                <div class="achievements-empty" id="achievementsEmpty" style="display: none;">
+                    <span class="empty-icon">🔒</span>
+                    <p class="empty-text" data-i18n="no_achievements">还没有解锁任何成就</p>
+                    <p class="empty-hint" data-i18n="no_achievements_hint">继续使用应用来解锁成就吧！</p>
+                </div>
+            </div>
         </div>
     </div>
 

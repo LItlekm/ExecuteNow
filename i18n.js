@@ -174,6 +174,22 @@ const TRANSLATIONS = {
         // 成就通知
         achievement_unlocked: '成就解锁！',
 
+        // 成就展示
+        achievements_title: '我的成就',
+        achievements_unlocked: '已解锁',
+        achievements_progress: '完成度',
+        rarest_achievement: '最稀有',
+        filter_by: '筛选：',
+        filter_all: '全部',
+        filter_unlocked: '已解锁',
+        filter_locked: '未解锁',
+        sort_by: '排序：',
+        sort_category: '按类别',
+        sort_rarity: '按稀有度',
+        sort_time: '按解锁时间',
+        no_achievements: '还没有解锁任何成就',
+        no_achievements_hint: '继续使用应用来解锁成就吧！',
+
         // 通用
         confirm: '确认',
         cancel: '取消',
@@ -451,6 +467,22 @@ const TRANSLATIONS = {
 
         // Achievement Notification
         achievement_unlocked: 'Achievement Unlocked!',
+
+        // Achievements Display
+        achievements_title: 'My Achievements',
+        achievements_unlocked: 'Unlocked',
+        achievements_progress: 'Progress',
+        rarest_achievement: 'Rarest',
+        filter_by: 'Filter:',
+        filter_all: 'All',
+        filter_unlocked: 'Unlocked',
+        filter_locked: 'Locked',
+        sort_by: 'Sort:',
+        sort_category: 'By Category',
+        sort_rarity: 'By Rarity',
+        sort_time: 'By Time',
+        no_achievements: 'No achievements unlocked yet',
+        no_achievements_hint: 'Keep using the app to unlock achievements!',
 
         // Common
         confirm: 'Confirm',

@@ -576,6 +576,20 @@ class App {
 
         // 便签编辑状态
         this.editingNoteId = null;
+
+        // 成就展示相关元素
+        this.achievementsBtn = document.getElementById('achievementsBtn');
+        this.achievementsModal = document.getElementById('achievementsModal');
+        this.closeAchievementsModal = document.getElementById('closeAchievementsModal');
+        this.achievementsList = document.getElementById('achievementsList');
+        this.achievementsEmpty = document.getElementById('achievementsEmpty');
+        this.unlockedCount = document.getElementById('unlockedCount');
+        this.achievementsProgress = document.getElementById('achievementsProgress');
+        this.rarestAchievement = document.getElementById('rarestAchievement');
+        this.achievementsFilterTabs = document.getElementById('achievementsFilterTabs');
+        this.achievementsSortSelect = document.getElementById('achievementsSortSelect');
+        this.currentAchievementFilter = 'all';
+        this.currentAchievementSort = 'category';
     }
 
     initEventListeners() {
@@ -584,6 +598,14 @@ class App {
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
         this.createTaskBtn.addEventListener('click', () => this.showCreateTaskModal());
         this.useTemplateBtn.addEventListener('click', () => this.showTemplateModal());
+        
+        // 成就展示
+        this.achievementsBtn?.addEventListener('click', () => this.showAchievementsModal());
+        this.closeAchievementsModal?.addEventListener('click', () => this.hideAchievementsModal());
+        this.achievementsFilterTabs?.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => this.filterAchievements(tab.dataset.filter));
+        });
+        this.achievementsSortSelect?.addEventListener('change', (e) => this.sortAchievements(e.target.value));
 
         // 专注模式
         this.exitFocusBtn.addEventListener('click', () => this.exitFocusMode());
@@ -3305,6 +3327,316 @@ class App {
         setTimeout(() => {
             this.achievementNotification.classList.remove('show');
         }, 4000);
+    }
+
+    // ==================== 成就展示界面 ====================
+
+    showAchievementsModal() {
+        this.renderAchievements();
+        this.achievementsModal.classList.add('active');
+        // 更新弹窗内的i18n文本
+        this.updateAchievementsModalText();
+    }
+
+    // 更新成就弹窗的翻译文本
+    updateAchievementsModalText() {
+        const modal = this.achievementsModal;
+        if (!modal) return;
+        
+        // 更新所有带 data-i18n 属性的元素
+        modal.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = this.i18n.t(key);
+            if (text !== key) {
+                el.textContent = text;
+            }
+        });
+        
+        // 更新下拉框选项
+        const sortSelect = this.achievementsSortSelect;
+        if (sortSelect) {
+            sortSelect.querySelectorAll('option').forEach(opt => {
+                const key = opt.getAttribute('data-i18n');
+                if (key) {
+                    const text = this.i18n.t(key);
+                    if (text !== key) {
+                        opt.textContent = text;
+                    }
+                }
+            });
+        }
+    }
+
+    hideAchievementsModal() {
+        this.achievementsModal.classList.remove('active');
+    }
+
+    // 筛选成就
+    filterAchievements(filter) {
+        this.currentAchievementFilter = filter;
+        this.achievementsFilterTabs.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.filter === filter);
+        });
+        this.renderAchievements();
+    }
+
+    // 排序成就
+    sortAchievements(sortBy) {
+        this.currentAchievementSort = sortBy;
+        this.renderAchievements();
+    }
+
+    // 获取已解锁的成就列表
+    getUnlockedAchievements() {
+        const allAchievements = getAllAchievements();
+        const unlocked = [];
+        
+        allAchievements.forEach(achievement => {
+            const unlockedKey = `unlocked_${achievement.id}`;
+            if (this.usageStats.stats[unlockedKey]) {
+                unlocked.push({
+                    ...achievement,
+                    unlockedAt: this.usageStats.stats[`${unlockedKey}_time`] || Date.now()
+                });
+            }
+        });
+        
+        return unlocked;
+    }
+
+    // 检查成就是否已解锁
+    isAchievementUnlocked(achievementId) {
+        const unlockedKey = `unlocked_${achievementId}`;
+        return !!this.usageStats.stats[unlockedKey];
+    }
+
+    // 获取成就解锁时间
+    getAchievementUnlockTime(achievementId) {
+        const timeKey = `unlocked_${achievementId}_time`;
+        return this.usageStats.stats[timeKey];
+    }
+
+    // 渲染成就列表
+    renderAchievements() {
+        const allAchievements = getAllAchievements();
+        const unlockedAchievements = this.getUnlockedAchievements();
+        const unlockedIds = new Set(unlockedAchievements.map(a => a.id));
+
+        // 更新统计概览
+        this.updateAchievementsOverview(allAchievements, unlockedAchievements);
+
+        // 根据筛选条件过滤成就
+        let filteredAchievements = allAchievements.map(achievement => ({
+            ...achievement,
+            isUnlocked: unlockedIds.has(achievement.id),
+            unlockedAt: this.getAchievementUnlockTime(achievement.id)
+        }));
+
+        if (this.currentAchievementFilter === 'unlocked') {
+            filteredAchievements = filteredAchievements.filter(a => a.isUnlocked);
+        } else if (this.currentAchievementFilter === 'locked') {
+            filteredAchievements = filteredAchievements.filter(a => !a.isUnlocked);
+        }
+
+        // 根据排序条件排序
+        filteredAchievements = this.sortAchievementsList(filteredAchievements);
+
+        // 检查是否为空
+        if (filteredAchievements.length === 0) {
+            this.achievementsList.innerHTML = '';
+            this.achievementsEmpty.style.display = 'block';
+            return;
+        }
+
+        this.achievementsEmpty.style.display = 'none';
+
+        // 根据排序方式渲染
+        if (this.currentAchievementSort === 'category') {
+            this.renderAchievementsByCategory(filteredAchievements);
+        } else if (this.currentAchievementSort === 'rarity') {
+            this.renderAchievementsByRarity(filteredAchievements);
+        } else {
+            this.renderAchievementsByTime(filteredAchievements);
+        }
+    }
+
+    // 排序成就列表
+    sortAchievementsList(achievements) {
+        const rarityOrder = { 'legendary': 0, 'epic': 1, 'rare': 2, 'common': 3 };
+        
+        switch (this.currentAchievementSort) {
+            case 'rarity':
+                return [...achievements].sort((a, b) => {
+                    const rarityDiff = rarityOrder[a.rarity] - rarityOrder[b.rarity];
+                    if (rarityDiff !== 0) return rarityDiff;
+                    return (b.isUnlocked ? 1 : 0) - (a.isUnlocked ? 1 : 0);
+                });
+            case 'time':
+                return [...achievements].sort((a, b) => {
+                    if (a.isUnlocked && b.isUnlocked) {
+                        return (b.unlockedAt || 0) - (a.unlockedAt || 0);
+                    }
+                    return (b.isUnlocked ? 1 : 0) - (a.isUnlocked ? 1 : 0);
+                });
+            default: // category
+                return achievements;
+        }
+    }
+
+    // 按类别渲染成就
+    renderAchievementsByCategory(achievements) {
+        const categoryNames = {
+            'streak': { name: '连续成就', icon: '🔥' },
+            'tasks': { name: '任务成就', icon: '📝' },
+            'challenges': { name: '挑战成就', icon: '🎯' },
+            'special': { name: '特殊成就', icon: '✨' }
+        };
+
+        // 按类别分组
+        const grouped = {};
+        achievements.forEach(achievement => {
+            const category = this.getAchievementCategory(achievement.id);
+            if (!grouped[category]) grouped[category] = [];
+            grouped[category].push(achievement);
+        });
+
+        let html = '';
+        Object.entries(categoryNames).forEach(([key, { name, icon }]) => {
+            const categoryAchievements = grouped[key];
+            if (!categoryAchievements || categoryAchievements.length === 0) return;
+
+            const unlockedCount = categoryAchievements.filter(a => a.isUnlocked).length;
+
+            html += `
+                <div class="achievements-category-header">
+                    <span class="category-icon">${icon}</span>
+                    <span class="category-title">${name}</span>
+                    <span class="category-count">${unlockedCount}/${categoryAchievements.length}</span>
+                </div>
+                <div class="achievements-category-grid">
+                    ${categoryAchievements.map(a => this.renderAchievementCard(a)).join('')}
+                </div>
+            `;
+        });
+
+        this.achievementsList.innerHTML = html;
+    }
+
+    // 按稀有度渲染成就
+    renderAchievementsByRarity(achievements) {
+        const rarityNames = {
+            'legendary': { name: '传说', icon: '👑' },
+            'epic': { name: '史诗', icon: '💎' },
+            'rare': { name: '稀有', icon: '💙' },
+            'common': { name: '普通', icon: '⚪' }
+        };
+
+        // 按稀有度分组
+        const grouped = {};
+        achievements.forEach(achievement => {
+            const rarity = achievement.rarity || 'common';
+            if (!grouped[rarity]) grouped[rarity] = [];
+            grouped[rarity].push(achievement);
+        });
+
+        let html = '';
+        ['legendary', 'epic', 'rare', 'common'].forEach(rarity => {
+            const rarityAchievements = grouped[rarity];
+            if (!rarityAchievements || rarityAchievements.length === 0) return;
+
+            const { name, icon } = rarityNames[rarity];
+            const unlockedCount = rarityAchievements.filter(a => a.isUnlocked).length;
+
+            html += `
+                <div class="achievements-category-header">
+                    <span class="category-icon">${icon}</span>
+                    <span class="category-title">${name}成就</span>
+                    <span class="category-count">${unlockedCount}/${rarityAchievements.length}</span>
+                </div>
+                <div class="achievements-category-grid">
+                    ${rarityAchievements.map(a => this.renderAchievementCard(a)).join('')}
+                </div>
+            `;
+        });
+
+        this.achievementsList.innerHTML = html;
+    }
+
+    // 按解锁时间渲染成就
+    renderAchievementsByTime(achievements) {
+        let html = '<div class="achievements-category-grid">';
+        achievements.forEach(achievement => {
+            html += this.renderAchievementCard(achievement);
+        });
+        html += '</div>';
+        this.achievementsList.innerHTML = html;
+    }
+
+    // 渲染单个成就卡片
+    renderAchievementCard(achievement) {
+        const rarityInfo = getRarityInfo(achievement.rarity);
+        const isUnlocked = achievement.isUnlocked;
+        const unlockedAt = achievement.unlockedAt;
+
+        let unlockTimeHtml = '';
+        if (isUnlocked && unlockedAt) {
+            const date = new Date(unlockedAt);
+            unlockTimeHtml = `<div class="achievement-unlock-time">解锁于 ${date.toLocaleDateString()}</div>`;
+        }
+
+        return `
+            <div class="achievement-card ${isUnlocked ? '' : 'locked'}" data-rarity="${achievement.rarity}">
+                <div class="achievement-icon-wrapper">
+                    <span class="achievement-icon">${achievement.icon}</span>
+                    ${isUnlocked ? '<span class="achievement-unlocked-badge">✓</span>' : ''}
+                </div>
+                <div class="achievement-name">${achievement.name}</div>
+                <div class="achievement-description">${achievement.description}</div>
+                <div class="achievement-rarity">
+                    <span class="rarity-dot"></span>
+                    ${rarityInfo.name}
+                </div>
+                ${unlockTimeHtml}
+            </div>
+        `;
+    }
+
+    // 获取成就所属类别
+    getAchievementCategory(achievementId) {
+        for (const [category, achievements] of Object.entries(ACHIEVEMENTS_CONFIG)) {
+            if (achievements[achievementId]) {
+                return category;
+            }
+        }
+        return 'special';
+    }
+
+    // 更新成就概览统计
+    updateAchievementsOverview(allAchievements, unlockedAchievements) {
+        const total = allAchievements.length;
+        const unlocked = unlockedAchievements.length;
+        const progress = total > 0 ? Math.round((unlocked / total) * 100) : 0;
+
+        this.unlockedCount.textContent = `${unlocked}/${total}`;
+        this.achievementsProgress.textContent = `${progress}%`;
+
+        // 找到最稀有的已解锁成就
+        const rarityOrder = ['legendary', 'epic', 'rare', 'common'];
+        let rarestAchievement = null;
+        
+        for (const rarity of rarityOrder) {
+            const found = unlockedAchievements.find(a => a.rarity === rarity);
+            if (found) {
+                rarestAchievement = found;
+                break;
+            }
+        }
+
+        if (rarestAchievement) {
+            this.rarestAchievement.textContent = rarestAchievement.name;
+        } else {
+            this.rarestAchievement.textContent = '-';
+        }
     }
 
     handleChallengeComplete(challenge) {

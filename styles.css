@@ -3469,3 +3469,442 @@ body::before {
 [data-theme="dark"] .note-item:hover {
     background: rgba(124, 92, 255, 0.15);
 }
+
+/* ==================== 成就展示界面 ==================== */
+
+/* 成就弹窗容器 */
+.achievements-modal {
+    max-width: 560px;
+}
+
+.achievements-modal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-bottom: var(--spacing-lg);
+}
+
+/* 成就统计概览 */
+.achievements-overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md), var(--shadow-inset);
+}
+
+.achievements-stat {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    text-align: center;
+    justify-content: center;
+}
+
+.achievements-stat .stat-icon {
+    font-size: 1.75rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.achievements-stat .stat-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.achievements-stat .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.achievements-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* 成就筛选器 */
+.achievements-filters {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: var(--spacing-xs);
+    background: var(--bg-tertiary);
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius);
+}
+
+.filter-tab {
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: transparent;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-tab:hover {
+    color: var(--text-primary);
+}
+
+.filter-tab.active {
+    background: var(--bg-glass);
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.filter-select {
+    min-width: 120px;
+}
+
+/* 成就列表 */
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* 成就分类标题 */
+.achievements-category-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    margin-top: var(--spacing-sm);
+}
+
+.achievements-category-header:first-child {
+    margin-top: 0;
+}
+
+.category-icon {
+    font-size: 1.25rem;
+}
+
+.category-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    padding: 2px 8px;
+    border-radius: var(--border-radius-full);
+}
+
+/* 成就卡片容器 */
+.achievements-category-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+}
+
+@media (max-width: 480px) {
+    .achievements-category-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 成就卡片 */
+.achievement-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-md);
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.achievement-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--rarity-color, var(--text-muted));
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+}
+
+.achievement-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.achievement-card:hover::before {
+    opacity: 1;
+}
+
+/* 未解锁状态 */
+.achievement-card.locked {
+    opacity: 0.6;
+}
+
+.achievement-card.locked .achievement-icon-wrapper {
+    filter: grayscale(1);
+    opacity: 0.5;
+}
+
+.achievement-card.locked .achievement-name {
+    color: var(--text-muted);
+}
+
+.achievement-card.locked::before {
+    background: var(--text-muted);
+}
+
+/* 成就图标包装器 */
+.achievement-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-bottom: var(--spacing-sm);
+    position: relative;
+    background: var(--rarity-bg, var(--bg-tertiary));
+    box-shadow: 0 4px 12px var(--rarity-shadow, rgba(0,0,0,0.1));
+    transition: all var(--transition-normal);
+}
+
+.achievement-card:hover .achievement-icon-wrapper {
+    transform: scale(1.1);
+}
+
+.achievement-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+
+/* 解锁勾选标记 */
+.achievement-unlocked-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: var(--gradient-success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: white;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+}
+
+/* 成就信息 */
+.achievement-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.3;
+}
+
+.achievement-description {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+/* 稀有度标签 */
+.achievement-rarity {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-full);
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--rarity-bg, var(--bg-tertiary));
+    color: var(--rarity-color, var(--text-muted));
+}
+
+.rarity-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--rarity-color, var(--text-muted));
+}
+
+/* 解锁时间 */
+.achievement-unlock-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: var(--spacing-xs);
+    opacity: 0.8;
+}
+
+/* 稀有度颜色变量 */
+.achievement-card[data-rarity="common"] {
+    --rarity-color: #9ca3af;
+    --rarity-bg: rgba(156, 163, 175, 0.15);
+    --rarity-shadow: rgba(156, 163, 175, 0.2);
+}
+
+.achievement-card[data-rarity="rare"] {
+    --rarity-color: #3b82f6;
+    --rarity-bg: rgba(59, 130, 246, 0.15);
+    --rarity-shadow: rgba(59, 130, 246, 0.2);
+}
+
+.achievement-card[data-rarity="epic"] {
+    --rarity-color: #a855f7;
+    --rarity-bg: rgba(168, 85, 247, 0.15);
+    --rarity-shadow: rgba(168, 85, 247, 0.2);
+}
+
+.achievement-card[data-rarity="legendary"] {
+    --rarity-color: #f59e0b;
+    --rarity-bg: rgba(245, 158, 11, 0.15);
+    --rarity-shadow: rgba(245, 158, 11, 0.25);
+}
+
+/* 传说成就特效 */
+.achievement-card[data-rarity="legendary"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(245, 158, 11, 0.05) 0%, 
+        transparent 50%, 
+        rgba(245, 158, 11, 0.05) 100%);
+    pointer-events: none;
+}
+
+.achievement-card[data-rarity="legendary"]:not(.locked) .achievement-icon-wrapper {
+    animation: legendaryGlow 3s ease-in-out infinite;
+}
+
+@keyframes legendaryGlow {
+    0%, 100% { box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
+    50% { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4), 0 0 30px rgba(245, 158, 11, 0.2); }
+}
+
+/* 成就空状态 */
+.achievements-empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-muted);
+}
+
+.achievements-empty .empty-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+    animation: float 3s ease-in-out infinite;
+}
+
+.achievements-empty .empty-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-secondary);
+}
+
+.achievements-empty .empty-hint {
+    font-size: 0.9rem;
+}
+
+/* 深色主题适配 */
+[data-theme="dark"] .achievements-overview {
+    background: var(--bg-glass);
+}
+
+[data-theme="dark"] .filter-tabs {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .filter-tab.active {
+    background: rgba(124, 92, 255, 0.2);
+}
+
+[data-theme="dark"] .achievement-card {
+    background: var(--bg-glass);
+}
+
+[data-theme="dark"] .achievement-card.locked {
+    background: rgba(30, 25, 45, 0.6);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .achievements-overview {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+    }
+    
+    .achievements-stat {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    
+    .achievements-stat .stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .achievements-stat .stat-content {
+        align-items: center;
+    }
+    
+    .achievements-stat .stat-value {
+        font-size: 1rem;
+    }
+    
+    .achievements-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-sm);
+    }
+    
+    .filter-group {
+        justify-content: space-between;
+    }
+}

@@ -161,6 +161,7 @@ class UsageStatsManager {
         if (this.stats[unlockedKey]) return; // 已解锁
 
         this.stats[unlockedKey] = true;
+        this.stats[`${unlockedKey}_time`] = Date.now(); // 记录解锁时间
         this.saveToStorage();
 
         const achievements = {
