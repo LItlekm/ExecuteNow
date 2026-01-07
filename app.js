@@ -1642,8 +1642,36 @@ class App {
                 .filter(s => s.length > 0);
 
             return steps;
+        } else if (apiProvider === 'zhipu') {
+            response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'glm-4-flash',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 1024
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`智谱GLM API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            const steps = content
+                .split('\n')
+                .filter(s => s.trim())
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 0);
+
+            return steps;
         } else {
-            throw new Error('不支持的API提供商');
+            throw new Error('不支持的API提供商，请选择 OpenAI、Claude 或智谱GLM');
         }
     }
 
