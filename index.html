@@ -235,8 +235,8 @@
         <div class="modal modal-large">
             <div class="modal-header">
                 <div class="template-tabs">
-                    <button class="tab-btn active" data-tab="preset">预设模板</button>
-                    <button class="tab-btn" data-tab="custom">我的模板</button>
+                    <button class="tab-btn active" data-tab="preset" data-i18n="preset_templates">预设模板</button>
+                    <button class="tab-btn" data-tab="custom" data-i18n="my_templates">我的模板</button>
                 </div>
                 <button class="modal-close" id="closeTemplateModal">&times;</button>
             </div>
@@ -255,10 +255,12 @@
                 <div class="tab-content" id="customTab">
                     <div class="custom-header">
                         <button id="createCustomBtn" class="btn btn-primary">
-                            <span>+ 创建模板</span>
+                            <span aria-hidden="true">+</span>
+                            <span data-i18n="create_custom">创建模板</span>
                         </button>
                         <button id="importBtn" class="btn btn-secondary">
-                            <span>📥 导入</span>
+                            <span aria-hidden="true">📥</span>
+                            <span data-i18n="import_template">导入</span>
                         </button>
                     </div>
                     <div class="template-grid" id="customGrid">
@@ -266,8 +268,8 @@
                     </div>
                     <div class="empty-state" id="customEmpty" style="display:none;">
                         <span class="empty-icon">📝</span>
-                        <p class="empty-text">还没有自定义模板</p>
-                        <p class="empty-hint">创建你自己的专属模板</p>
+                        <p class="empty-text" data-i18n="no_custom_templates">还没有自定义模板</p>
+                        <p class="empty-hint" data-i18n="no_custom_hint">创建你自己的专属模板</p>
                     </div>
                 </div>
             </div>

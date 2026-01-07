@@ -243,7 +243,24 @@ class App {
         this.challengeManager.notificationManager = this.usageStats.notificationManager;
 
         // 语言系统
-        this.i18n = window.i18n;
+        this.i18n = window.i18n || (typeof i18n !== 'undefined' ? i18n : null);
+        if (!this.i18n) {
+            console.error('i18n not found; falling back to identity translations');
+            this.i18n = {
+                set: () => { },
+                get: () => 'zh',
+                t: (key) => key,
+                getAllCoaches: () => COACHES.map(c => ({ id: c.id, name: c.name, description: c.description, messages: c.messages })),
+                getCoachData: (coachId) => {
+                    const coach = COACHES.find(c => c.id === coachId) || COACHES[0];
+                    return {
+                        name: coach ? coach.name : coachId,
+                        description: coach ? coach.description : '',
+                        messages: coach ? coach.messages : {}
+                    };
+                }
+            };
+        }
 
         // 当前状态
         this.currentTask = null;
@@ -277,6 +294,7 @@ class App {
         this.initEventListeners();
         this.applyTheme();
         this.render();
+        this.updateUIText();
 
         // 记录今日首次启动活动
         this.usageStats.recordActivity({
@@ -684,10 +702,10 @@ class App {
     }
 
     updateCoachSelectorOptions() {
-        const coaches = this.i18n.getAllCoaches();
-        this.defaultCoachSelect.innerHTML = coaches.map(coach =>
-            `<option value="${coach.id}">${coach.name}</option>`
-        ).join('');
+        this.defaultCoachSelect.innerHTML = COACHES.map(coach => {
+            const coachName = this.i18n.getCoachData(coach.id).name;
+            return `<option value="${coach.id}">${coach.avatar} ${coachName}</option>`;
+        }).join('');
     }
 
     updateEmptyStateText() {
@@ -713,7 +731,7 @@ class App {
     renderTaskList() {
         const tasks = this.taskManager.getAllTasks();
 
-        this.taskCount.textContent = `${tasks.length} 个任务`;
+        this.taskCount.textContent = this.t('tasks_count', { count: tasks.length });
 
         if (tasks.length === 0) {
             this.taskList.innerHTML = '';
@@ -741,9 +759,9 @@ class App {
                     <div class="task-info">
                         <div class="task-name">${escapeHtml(task.name)}</div>
                         <div class="task-progress">
-                            ${task.status === 'completed' ? '已完成' :
-                              task.status === 'shelved' ? '已搁置' :
-                              `${completedSteps}/${task.steps.length} 步`}
+                            ${task.status === 'completed' ? this.t('status_completed') :
+                              task.status === 'shelved' ? this.t('status_shelved') :
+                              `${completedSteps}/${task.steps.length} ${this.t('unit_steps')}`}
                         </div>
                         ${task.status === 'in_progress' ? `
                             <div class="task-progress-bar">
@@ -753,15 +771,15 @@ class App {
                     </div>
                     <div class="task-actions">
                         ${task.status === 'in_progress' ? `
-                            <button class="task-action-btn primary" data-action="continue" title="继续">▶</button>
+                            <button class="task-action-btn primary" data-action="continue" title="${this.t('continue')}">▶</button>
                         ` : ''}
                         ${task.status === 'shelved' ? `
-                            <button class="task-action-btn" data-action="resume" title="恢复">↩</button>
+                            <button class="task-action-btn" data-action="resume" title="${this.t('resume')}">↩</button>
                         ` : ''}
                         ${task.status === 'completed' ? `
-                            <button class="task-action-btn" data-action="view" title="查看">👁</button>
+                            <button class="task-action-btn" data-action="view" title="${this.t('view')}">👁</button>
                         ` : ''}
-                        <button class="task-action-btn" data-action="delete" title="删除">🗑</button>
+                        <button class="task-action-btn" data-action="delete" title="${this.t('delete')}">🗑</button>
                     </div>
                 </div>
             `;
@@ -918,12 +936,12 @@ class App {
 
         // 更新按钮状态
         if (this.viewOnlyMode) {
-            this.completeStepBtn.innerHTML = '<span>下一步</span>';
+            this.completeStepBtn.innerHTML = `<span>${this.t('next_step')}</span>`;
             this.completeStepBtn.disabled = currentStep >= totalSteps - 1;
             this.skipStepBtn.style.display = 'none';
             this.shelveTaskBtn.style.display = 'none';
         } else {
-            this.completeStepBtn.innerHTML = '<span>完成这一步</span>';
+            this.completeStepBtn.innerHTML = `<span>${this.t('complete_step')}</span>`;
             this.completeStepBtn.disabled = currentStep >= totalSteps;
             this.skipStepBtn.style.display = '';
             this.shelveTaskBtn.style.display = '';
@@ -1394,7 +1412,7 @@ class App {
             <button class="template-card" data-template-id="${template.id}">
                 <span class="template-icon">${template.icon}</span>
                 <span class="template-name">${template.name}</span>
-                <span class="template-steps-count">${template.steps.length} 步</span>
+                <span class="template-steps-count">${template.steps.length} ${this.t('unit_steps')}</span>
             </button>
         `).join('');
 
@@ -1492,9 +1510,7 @@ class App {
 
     showSettingsModal() {
         // 填充教练选项
-        this.defaultCoachSelect.innerHTML = COACHES.map(coach => `
-            <option value="${coach.id}">${coach.avatar} ${coach.name}</option>
-        `).join('');
+        this.updateCoachSelectorOptions();
 
         this.defaultCoachSelect.value = this.settingsManager.get('defaultCoach');
         this.vibrationToggle.checked = this.settingsManager.get('vibrationEnabled');
@@ -1554,11 +1570,11 @@ class App {
             <div class="template-card custom-card" data-id="${t.id}">
                 <span class="template-icon" style="color: ${t.color || '#6366f1'}">${t.icon}</span>
                 <span class="template-name">${escapeHtml(t.name)}</span>
-                <span class="template-steps-count">${t.steps.length} 步</span>
+                <span class="template-steps-count">${t.steps.length} ${this.t('unit_steps')}</span>
                 <div class="template-actions">
-                    <button class="action-btn" data-action="edit" title="编辑">✏️</button>
-                    <button class="action-btn" data-action="export" title="导出">📤</button>
-                    <button class="action-btn" data-action="delete" title="删除">🗑️</button>
+                    <button class="action-btn" data-action="edit" title="${this.t('edit')}">✏️</button>
+                    <button class="action-btn" data-action="export" title="${this.t('export_template')}">📤</button>
+                    <button class="action-btn" data-action="delete" title="${this.t('delete')}">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -2076,7 +2092,7 @@ class App {
     updatePauseButtonIcon() {
         const icon = this.pauseTimerBtn.querySelector('.pause-icon');
         icon.textContent = this.timerPaused ? '▶️' : '⏸️';
-        this.pauseTimerBtn.title = this.timerPaused ? '继续' : '暂停';
+        this.pauseTimerBtn.title = this.timerPaused ? this.t('continue') : this.t('pause');
     }
 
     resetStepTimer() {

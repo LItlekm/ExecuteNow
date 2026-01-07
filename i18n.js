@@ -164,6 +164,9 @@ const TRANSLATIONS = {
         // 通用
         confirm: '确认',
         cancel: '取消',
+        resume: '恢复',
+        pause: '暂停',
+        next_step: '下一步',
         save: '保存',
         delete: '删除',
         edit: '编辑',
@@ -176,6 +179,7 @@ const TRANSLATIONS = {
         // 自定义模板
         custom_templates: '自定义模板',
         preset_templates: '预设模板',
+        my_templates: '我的模板',
         create_custom: '创建模板',
         import_template: '导入模板',
         template_name: '模板名称',
@@ -414,6 +418,9 @@ const TRANSLATIONS = {
         // Common
         confirm: 'Confirm',
         cancel: 'Cancel',
+        resume: 'Resume',
+        pause: 'Pause',
+        next_step: 'Next Step',
         save: 'Save',
         delete: 'Delete',
         edit: 'Edit',
@@ -426,6 +433,7 @@ const TRANSLATIONS = {
         // Custom Templates
         custom_templates: 'Custom Templates',
         preset_templates: 'Preset Templates',
+        my_templates: 'My Templates',
         create_custom: 'Create Template',
         import_template: 'Import',
         template_name: 'Template Name',
@@ -629,6 +637,12 @@ class I18n {
 
 // 创建全局实例
 const i18n = new I18n();
+
+// Expose i18n for browser (classic <script> usage)
+if (typeof window !== 'undefined') {
+    window.i18n = i18n;
+    window.TRANSLATIONS = TRANSLATIONS;
+}
 
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
