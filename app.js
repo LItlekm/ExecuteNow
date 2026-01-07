@@ -986,7 +986,7 @@ class App {
         setTimeout(() => {
             this.stepCelebrationOverlay.classList.add('fade-out');
             setTimeout(() => {
-                this.stepCelebrationOverlay.classList.remove('fade-out');
+                this.stepCelebrationOverlay.classList.remove('active', 'fade-out');
             }, 300);
         }, 800);
     }
