@@ -866,7 +866,7 @@ class App {
 
     // 创建表情爆发效果
     createEmojiBurst(x, y, emojis) {
-        const particleCount = 10;
+        const particleCount = 15;
 
         for (let i = 0; i < particleCount; i++) {
             const emoji = emojis[Math.floor(Math.random() * emojis.length)];
@@ -877,7 +877,7 @@ class App {
 
             // 360度均匀分布，稍微随机化
             const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-            const distance = 60 + Math.random() * 50;
+            const distance = 150 + Math.random() * 100;  // 增大到 150-250px
             const bx = Math.cos(angle) * distance;
             const by = Math.sin(angle) * distance;
 
@@ -891,11 +891,11 @@ class App {
                 --bx: ${bx}px;
                 --by: ${by}px;
                 --rotate: ${(Math.random() - 0.5) * 40}deg;
-                animation: emojiBurst 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+                animation: emojiBurst 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
             `;
 
             this.celebrationContainer.appendChild(particle);
-            setTimeout(() => particle.remove(), 800);
+            setTimeout(() => particle.remove(), 1200);
         }
     }
 
@@ -933,16 +933,12 @@ class App {
         // 添加成功发光状态
         setTimeout(() => {
             this.completeStepBtn.classList.add('success-glow');
-        }, 300);
+        }, 200);
 
-        // 清理动画类
+        // 统一清理所有动画类
         setTimeout(() => {
-            this.completeStepBtn.classList.remove('celebrating');
-        }, 600);
-
-        setTimeout(() => {
-            this.completeStepBtn.classList.remove('success-glow');
-        }, 1000);
+            this.completeStepBtn.classList.remove('celebrating', 'success-glow');
+        }, 800);
     }
 
     // 播放"叮~"音效

@@ -981,6 +981,7 @@ body::before {
     box-shadow: var(--shadow-lg), 0 0 30px rgba(16, 185, 129, 0.3);
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .btn-complete::before {
@@ -1127,15 +1128,15 @@ body::before {
 @keyframes emojiBurst {
     0% {
         opacity: 1;
-        transform: translate(-50%, -50%) translate(0, 0) scale(0.5);
+        transform: translate(-50%, -50%) translate(0, 0) scale(0.3);
     }
-    15% {
+    20% {
         opacity: 1;
-        transform: translate(-50%, -50%) translate(calc(var(--bx) * 0.6), calc(var(--by) * 0.6)) scale(1);
+        transform: translate(-50%, -50%) translate(calc(var(--bx) * 0.8), calc(var(--by) * 0.8)) scale(1.2);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, -50%) translate(var(--bx), calc(var(--by) + 20px)) scale(0.7) rotate(var(--rotate));
+        transform: translate(-50%, -50%) translate(calc(var(--bx) * 1.3), calc(var(--by) + 60px)) scale(0.6) rotate(var(--rotate));
     }
 }
 
