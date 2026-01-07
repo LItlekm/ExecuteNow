@@ -996,8 +996,11 @@ class App {
         // 触发按钮庆祝动画
         this.triggerCompleteAnimation();
 
-        // 显示步骤完成庆祝动画（✅ + 音效）
-        this.showStepCelebration();
+        // 检查是否是最后一步
+        const isLastStep = this.currentTask.currentStep === this.currentTask.steps.length - 1;
+
+        // 显示步骤完成庆祝动画��✅ + 音效）
+        this.showStepCelebration(isLastStep);
 
         // 震动反馈
         if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
@@ -1239,8 +1242,54 @@ class App {
         }
     }
 
+    // 播放任务完成庆祝音效
+    playTaskCompletionSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const now = audioContext.currentTime;
+
+            // 创建庆祝音效：上行琶音（C-E-G-C-E-G）
+            const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C5, E5, G5, C6, E6, G6
+            const duration = 0.15;
+            const totalDuration = notes.length * duration;
+
+            notes.forEach((freq, i) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, now + i * duration);
+
+                // 音量包络：每个音符淡入淡出
+                gainNode.gain.setValueAtTime(0, now + i * duration);
+                gainNode.gain.linearRampToValueAtTime(0.25, now + i * duration + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + i * duration + duration);
+
+                oscillator.start(now + i * duration);
+                oscillator.stop(now + i * duration + duration);
+            });
+
+            // 添加一个最终的共鸣音
+            const finalOsc = audioContext.createOscillator();
+            const finalGain = audioContext.createGain();
+            finalOsc.connect(finalGain);
+            finalGain.connect(audioContext.destination);
+            finalOsc.type = 'sine';
+            finalOsc.frequency.setValueAtTime(2093.00, now + totalDuration); // C7
+            finalGain.gain.setValueAtTime(0.15, now + totalDuration);
+            finalGain.gain.exponentialRampToValueAtTime(0.01, now + totalDuration + 0.4);
+            finalOsc.start(now + totalDuration);
+            finalOsc.stop(now + totalDuration + 0.4);
+        } catch (e) {
+            console.error('庆祝音效播放失败:', e);
+        }
+    }
+
     // 显示步骤完成庆祝动画
-    showStepCelebration() {
+    showStepCelebration(isLastStep = false) {
         if (!this.stepCelebrationOverlay) return;
 
         // 重置动画状态
@@ -1252,8 +1301,12 @@ class App {
         // 激活动画
         this.stepCelebrationOverlay.classList.add('active');
 
-        // 播放音效
-        this.playDingSound();
+        // 播放音效：最后一步播放庆祝音效，否则播放普通音效
+        if (isLastStep) {
+            this.playTaskCompletionSound();
+        } else {
+            this.playDingSound();
+        }
 
         // 动画完成后自动隐藏
         setTimeout(() => {
