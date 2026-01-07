@@ -1228,6 +1228,113 @@ body::before {
     font-family: 'DM Sans', monospace;
 }
 
+/* ==================== 步骤完成庆祝动画 ==================== */
+
+.step-celebration-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.step-celebration-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.step-celebration-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkmark-circle {
+    width: 120px;
+    height: 120px;
+    filter: drop-shadow(0 4px 20px rgba(56, 239, 125, 0.4));
+}
+
+/* 圆圈路径 - 绘制动画 */
+.check-circle-path {
+    stroke: #38ef7d;
+    stroke-width: 4;
+    stroke-dasharray: 226;
+    stroke-dashoffset: 226;
+    transform: rotate(-90deg);
+    transform-origin: center;
+}
+
+.step-celebration-overlay.active .check-circle-path {
+    animation: circleDraw 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes circleDraw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* 勾选路径 - 绘制动画 */
+.check-path {
+    stroke: #38ef7d;
+    stroke-width: 6;
+    stroke-dasharray: 45;
+    stroke-dashoffset: 45;
+}
+
+.step-celebration-overlay.active .check-path {
+    animation: checkDraw 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.25s forwards;
+}
+
+@keyframes checkDraw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* 整体缩放弹跳 */
+.step-celebration-overlay.active .checkmark-circle {
+    animation: checkmarkPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 淡出动画 */
+.step-celebration-overlay.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
 /* ==================== 弹窗系统 ==================== */
 
 .modal-overlay {

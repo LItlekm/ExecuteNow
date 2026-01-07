@@ -308,6 +308,7 @@ class App {
         this.skipStepBtn = document.getElementById('skipStepBtn');
         this.shelveTaskBtn = document.getElementById('shelveTaskBtn');
         this.celebrationContainer = document.getElementById('celebrationContainer');
+        this.stepCelebrationOverlay = document.getElementById('stepCelebrationOverlay');
 
         // 创建任务弹窗
         this.createTaskModal = document.getElementById('createTaskModal');
@@ -756,6 +757,9 @@ class App {
         // 触发按钮庆祝动画
         this.triggerCompleteAnimation();
 
+        // 显示步骤完成庆祝动画（✅ + 音效）
+        this.showStepCelebration();
+
         // 震动反馈
         if (this.settingsManager.get('vibrationEnabled') && navigator.vibrate) {
             navigator.vibrate(50);
@@ -939,6 +943,56 @@ class App {
         setTimeout(() => {
             this.completeStepBtn.classList.remove('success-glow');
         }, 1000);
+    }
+
+    // 播放"叮~"音效
+    playDingSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // 音效参数：清脆的"叮~"声
+            oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+            oscillator.frequency.exponentialRampToValueAtTime(1760, audioContext.currentTime + 0.1); // 滑向 A6
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            // 音频播放失败时静默处理
+            console.error('音效播放失败:', e);
+        }
+    }
+
+    // 显示步骤完成庆祝动画
+    showStepCelebration() {
+        if (!this.stepCelebrationOverlay) return;
+
+        // 重置动画状态
+        this.stepCelebrationOverlay.classList.remove('active', 'fade-out');
+
+        // 强制重绘
+        void this.stepCelebrationOverlay.offsetWidth;
+
+        // 激活动画
+        this.stepCelebrationOverlay.classList.add('active');
+
+        // 播放音效
+        this.playDingSound();
+
+        // 动画完成后自动隐藏
+        setTimeout(() => {
+            this.stepCelebrationOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                this.stepCelebrationOverlay.classList.remove('fade-out');
+            }, 300);
+        }, 800);
     }
 
     // 格式化日期标签（今天、昨天、前天、X月X日）
