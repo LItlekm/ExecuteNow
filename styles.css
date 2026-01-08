@@ -4295,3 +4295,344 @@ body::before {
         justify-content: space-between;
     }
 }
+
+/* ==================== 移动端适配 - 新增断点 ==================== */
+
+/* === 480px 断点 - 表单触摸友好性和步骤生成器 === */
+@media (max-width: 480px) {
+    /* 表单触摸友好性 - 确保最小 44px 触摸区域 */
+    .form-input,
+    .form-textarea,
+    .form-select {
+        min-height: 44px;
+        font-size: 16px; /* 防止 iOS Safari 自动缩放 */
+    }
+
+    .btn {
+        min-height: 44px;
+    }
+
+    /* 步骤生成器 - 改为垂直布局 */
+    .step-generator-row {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .step-generator-row .btn {
+        width: 100%;
+    }
+
+    #generateStepsBtn {
+        min-width: 100%;
+    }
+}
+
+/* === 400px 断点 - 挑战系统、专注模式、连续天数、设置面板 === */
+@media (max-width: 400px) {
+    /* 挑战类型选择器 - 改为垂直堆叠 */
+    .challenge-type-selector {
+        flex-wrap: wrap;
+    }
+
+    .challenge-type-btn {
+        flex: 1 1 100%;
+    }
+
+    /* 挑战模板网格 - 单列 */
+    .challenge-template-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 专注模式 - 调整步骤卡片 */
+    .focus-step-container {
+        max-width: 100%;
+    }
+
+    .focus-step-card {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+
+    /* 连续天数显示区 - 改为垂直布局 */
+    .streak-display {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .streak-display-content {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        text-align: center;
+    }
+
+    .streak-main {
+        justify-content: center;
+    }
+
+    .streak-stats {
+        width: 100%;
+        justify-content: center;
+        gap: var(--spacing-xl);
+    }
+
+    .streak-stat {
+        text-align: center;
+    }
+
+    /* 设置面板 - 改为垂直布局 */
+    .setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .setting-item .form-select,
+    .setting-item .form-input,
+    .setting-item .toggle-switch {
+        align-self: flex-end;
+    }
+}
+
+/* === 375px 断点 - iPhone SE 适配 === */
+@media (max-width: 375px) {
+    /* 模态窗口系统 - 减小内边距 */
+    .modal-overlay {
+        padding: var(--spacing-sm);
+    }
+
+    .modal,
+    .modal-large {
+        max-width: 100%;
+        border-radius: var(--border-radius-lg);
+    }
+
+    .modal-body {
+        padding: var(--spacing-lg);
+    }
+
+    .modal-header {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .modal-footer {
+        padding: var(--spacing-sm) var(--spacing-lg);
+    }
+
+    /* 步骤类型选择器 - 两列布局 */
+    .step-type-selector {
+        flex-wrap: wrap;
+    }
+
+    .step-type-btn {
+        flex: 1 1 calc(50% - var(--spacing-xs));
+        min-width: 120px;
+        padding: var(--spacing-sm);
+    }
+
+    .step-type-btn:last-child {
+        flex-basis: 100%;
+    }
+
+    .step-type-desc {
+        display: none;
+    }
+
+    /* 挑战图标和颜色网格 - 6列 */
+    .challenge-icon-grid,
+    .challenge-color-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .challenge-icon-option,
+    .challenge-color-option {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* 专注模式 - 进一步调整 */
+    .focus-step-card {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .coach-message {
+        max-width: 95%;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .coach-avatar {
+        font-size: 1.5rem;
+    }
+
+    .coach-text {
+        font-size: 0.875rem;
+    }
+
+    /* 设置面板 - 控件全宽 */
+    .setting-item .form-select,
+    .setting-item .form-input {
+        width: 100%;
+    }
+
+    .language-selector {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* 图标选择器 - 6列 */
+    .icon-selector {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .color-option {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* 头部区域 */
+    .header {
+        padding: var(--spacing-md) 0;
+    }
+
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .header-actions {
+        gap: var(--spacing-xs);
+    }
+
+    /* 成就弹窗 - 统计概览单列 */
+    .achievements-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .achievements-stat {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .achievements-stat:last-child {
+        border-bottom: none;
+    }
+
+    .filter-tabs {
+        flex-wrap: wrap;
+    }
+
+    .filter-tab {
+        flex: 1 1 auto;
+        text-align: center;
+        padding: var(--spacing-sm);
+    }
+
+    /* 日历弹窗 */
+    .calendar-grid {
+        gap: 2px;
+    }
+
+    .calendar-day {
+        font-size: 0.8rem;
+    }
+
+    .calendar-legend {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+
+    .calendar-legend-item {
+        font-size: 0.7rem;
+    }
+}
+
+/* === 320px 断点 - 极小屏幕适配 === */
+@media (max-width: 320px) {
+    /* 模态窗口 - 最小内边距 */
+    .modal-body {
+        padding: var(--spacing-md);
+    }
+
+    .modal-header,
+    .modal-footer {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    /* 步骤类型选择器 - 单列水平布局 */
+    .step-type-btn {
+        flex: 1 1 100%;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .step-type-icon {
+        font-size: 1.25rem;
+    }
+
+    .step-type-desc {
+        display: block;
+        margin-left: auto;
+    }
+
+    /* 挑战图标和颜色网格 - 5列 */
+    .challenge-icon-grid,
+    .challenge-color-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    /* 专注模式 - 最小尺寸 */
+    .focus-step-card {
+        padding: var(--spacing-md);
+    }
+
+    .step-content {
+        font-size: 1.1rem;
+    }
+
+    /* 连续天数显示区 */
+    .streak-display {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .streak-stats {
+        gap: var(--spacing-lg);
+    }
+
+    .streak-stat-value {
+        font-size: 1rem;
+    }
+
+    /* 图标选择器 - 5列 */
+    .icon-selector {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .icon-option {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+
+    /* 头部区域 */
+    .title {
+        font-size: 1.35rem;
+    }
+
+    .btn-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+
+    /* 日历弹窗 */
+    .calendar-day-label {
+        font-size: 0.65rem;
+        padding: var(--spacing-xs);
+    }
+
+    .calendar-legend {
+        flex-direction: column;
+        align-items: center;
+    }
+}
