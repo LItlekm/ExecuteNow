@@ -492,6 +492,8 @@ class App {
         this.aiStepsStage = document.getElementById('aiStepsStage');
         this.aiCompleteStage = document.getElementById('aiCompleteStage');
         this.thinkingTaskName = document.getElementById('thinkingTaskName');
+        this.thinkingLabel = document.getElementById('thinkingLabel');
+        this.thinkingCoachAvatar = document.getElementById('thinkingCoachAvatar');
         this.stepsContainer = document.getElementById('stepsContainer');
         this.generatedStepsCount = document.getElementById('generatedStepsCount');
         this.totalStepsCount = document.getElementById('totalStepsCount');
@@ -1849,6 +1851,19 @@ class App {
         // 重置所有阶段
         this.resetAIGeneratingStages();
 
+        // 获取当前选择的教练信息
+        const coachId = this.selectedCoachId || this.settingsManager.get('defaultCoach') || 'gentle';
+        const coachData = this.i18n.getCoachData(coachId);
+        const coachName = coachData.name;
+
+        // 设置教练头像和标签
+        if (this.thinkingCoachAvatar) {
+            this.thinkingCoachAvatar.textContent = coachData.avatar || '👩';
+        }
+        if (this.thinkingLabel) {
+            this.thinkingLabel.textContent = `${coachName}正在努力思考如何拆解`;
+        }
+
         // 设置任务名称
         if (this.thinkingTaskName) {
             this.thinkingTaskName.textContent = `「${taskName}」`;
@@ -1937,7 +1952,7 @@ class App {
     }
 
     addGeneratedStep(stepText, index) {
-        if (!this.stepsContainer) return;
+        if (!this.stepsContainer) return Promise.resolve();
 
         // 如果是第一步，切换到步骤生成阶段
         if (index === 0) {
@@ -1947,7 +1962,8 @@ class App {
         // 创建步骤卡片
         const stepCard = document.createElement('div');
         stepCard.className = 'generated-step-card';
-        stepCard.style.animationDelay = `${index * 0.1}s`;
+        // 移除动画延迟，因为现在是逐个添加
+        stepCard.style.animationDelay = '0s';
 
         const stepNumber = document.createElement('div');
         stepNumber.className = 'generated-step-number';
@@ -1956,50 +1972,50 @@ class App {
         const stepTextElement = document.createElement('div');
         stepTextElement.className = 'generated-step-text';
 
-        // 打字机效果
-        this.typewriterEffect(stepTextElement, stepText, 20 + index * 30);
-
         stepCard.appendChild(stepNumber);
         stepCard.appendChild(stepTextElement);
         this.stepsContainer.appendChild(stepCard);
-
-        // 自动滚动到底部
-        setTimeout(() => {
-            if (this.stepsContainer) {
-                this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
-            }
-        }, 100);
 
         // 更新计数
         this.currentGeneratedStepCount = index + 1;
         if (this.generatedStepsCount) {
             this.generatedStepsCount.textContent = this.currentGeneratedStepCount;
         }
+
+        // 返回打字机效果的Promise，等待动画完成
+        return this.typewriterEffect(stepTextElement, stepText, 25);
     }
 
     typewriterEffect(element, text, delay = 30) {
-        let index = 0;
-        element.textContent = '';
+        return new Promise((resolve) => {
+            let index = 0;
+            element.textContent = '';
 
-        // 添加光标
-        const cursor = document.createElement('span');
-        cursor.className = 'typewriter-cursor';
-        element.appendChild(cursor);
+            // 添加光标
+            const cursor = document.createElement('span');
+            cursor.className = 'typewriter-cursor';
+            element.appendChild(cursor);
 
-        const typeNextChar = () => {
-            if (index < text.length) {
-                cursor.before(text.charAt(index));
-                index++;
-                setTimeout(typeNextChar, delay);
-            } else {
-                // 打字完成，移除光标
-                setTimeout(() => {
-                    cursor.remove();
-                }, 500);
-            }
-        };
+            const typeNextChar = () => {
+                if (index < text.length) {
+                    cursor.before(text.charAt(index));
+                    index++;
+                    setTimeout(typeNextChar, delay);
+                } else {
+                    // 打字完成，等待短暂时间后移除光标并resolve
+                    setTimeout(() => {
+                        cursor.remove();
+                        // 自动滚动到底部
+                        if (this.stepsContainer) {
+                            this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+                        }
+                        resolve();
+                    }, 400);
+                }
+            };
 
-        typeNextChar();
+            typeNextChar();
+        });
     }
 
     setAIGeneratingStatus(text) {
@@ -2126,7 +2142,7 @@ class App {
     }
 
     async applyGeneratedSteps(steps, isAI = true) {
-        // 询问是否替换现有步骤（如果已有步骤）
+        // 询问是否��换现有步骤（如果已有步骤）
         if (this.tempSteps.length > 0) {
             if (!confirm('当前已有步骤，是否替换为生成的步骤？')) {
                 this.hideAIGeneratingModal();
@@ -2136,15 +2152,12 @@ class App {
 
         // 如果是AI生成的步骤，逐步展示动画
         if (isAI && this.aiGeneratingModal && this.aiGeneratingModal.classList.contains('active')) {
-            // 逐个添加步骤卡片
+            // 逐个添加步骤卡片，等待每个步骤的打字机效果完成
             for (let i = 0; i < steps.length; i++) {
-                this.addGeneratedStep(steps[i], i);
-                // 每个步骤之间有延迟
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await this.addGeneratedStep(steps[i], i);
+                // 每个步骤完成后短暂暂停
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
-
-            // 等待打字机效果完成
-            await new Promise(resolve => setTimeout(resolve, 800));
         }
 
         // 应用步骤到实际列表
