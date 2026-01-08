@@ -709,6 +709,7 @@ class App {
         });
         this.aiProviderSelect.addEventListener('change', (e) => {
             this.settingsManager.set('aiProvider', e.target.value);
+            this.updateAIProviderUI();
         });
         this.aiApiKeyInput.addEventListener('input', (e) => {
             this.settingsManager.set('aiApiKey', e.target.value);
@@ -2022,8 +2023,8 @@ class App {
     }
 
     async fetchAIGeneratedSteps(taskName, stepType) {
-        const apiKey = this.settingsManager.get('aiApiKey');
-        const apiProvider = this.settingsManager.get('aiProvider') || 'openai';
+        const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'gemini');
+        const apiKey = this.getAIKeyForProvider(apiProvider);
 
         if (!apiKey) {
             throw new Error('未配置API Key，请前往设置页面配置');
@@ -2041,66 +2042,7 @@ class App {
 4. 只返回步骤内容，每行一个步骤，不需要编号`;
 
         let response;
-        if (apiProvider === 'openai') {
-            this.setAIGeneratingStatus('请求 OpenAI…');
-            response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.7
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`OpenAI API请求失败: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const content = data.choices[0].message.content;
-            this.setAIGeneratingStatus('解析结果…');
-            const steps = content
-                .split('\n')
-                .filter(s => s.trim())
-                .map(s => s.replace(/^\d+\.\s*/, '').trim())
-                .filter(s => s.length > 0);
-
-            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
-        } else if (apiProvider === 'claude') {
-            this.setAIGeneratingStatus('请求 Claude…');
-            response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01'
-                },
-                body: JSON.stringify({
-                    model: 'claude-3-haiku-20240307',
-                    max_tokens: 1024,
-                    messages: [{ role: 'user', content: prompt }]
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Claude API请求失败: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const content = data.content[0].text;
-            this.setAIGeneratingStatus('解析结果…');
-            const steps = content
-                .split('\n')
-                .filter(s => s.trim())
-                .map(s => s.replace(/^\d+\.\s*/, '').trim())
-                .filter(s => s.length > 0);
-
-            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
-        } else if (apiProvider === 'zhipu') {
+        if (apiProvider === 'zhipu') {
             this.setAIGeneratingStatus('请求 智谱GLM…');
             response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
                 method: 'POST',
@@ -2161,8 +2103,26 @@ class App {
 
             return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else {
-            throw new Error('不支持的API提供商，请选择 OpenAI、Claude、智谱GLM 或 Gemini');
+            throw new Error('不支持的API提供商，请选择 智谱GLM 或 Gemini');
         }
+    }
+
+    getAIKeyForProvider(provider) {
+        const normalized = this.normalizeAIProvider(provider);
+        if (normalized === 'gemini') {
+            // 服务方提供（运行时注入）：window.__GEMINI_API_KEY__ = '...'
+            const builtin = window.__GEMINI_API_KEY__;
+            if (typeof builtin === 'string' && builtin.trim()) return builtin.trim();
+
+            // 或者通过 meta 注入：<meta name="gemini-api-key" content="...">
+            const metaKey = document.querySelector('meta[name="gemini-api-key"]')?.getAttribute('content');
+            if (typeof metaKey === 'string' && metaKey.trim()) return metaKey.trim();
+
+            return '';
+        }
+
+        const configured = this.settingsManager.get('aiApiKey');
+        return (typeof configured === 'string' && configured.trim()) ? configured.trim() : '';
     }
 
     async applyGeneratedSteps(steps, isAI = true) {
@@ -2349,10 +2309,39 @@ class App {
 
         this.defaultCoachSelect.value = this.settingsManager.get('defaultCoach');
         this.vibrationToggle.checked = this.settingsManager.get('vibrationEnabled');
-        this.aiProviderSelect.value = this.settingsManager.get('aiProvider') || 'openai';
+        const storedProvider = this.settingsManager.get('aiProvider') || 'gemini';
+        const normalizedProvider = this.normalizeAIProvider(storedProvider);
+        if (storedProvider !== normalizedProvider) {
+            this.settingsManager.set('aiProvider', normalizedProvider);
+        }
+        this.aiProviderSelect.value = normalizedProvider;
         this.aiApiKeyInput.value = this.settingsManager.get('aiApiKey') || '';
+        this.updateAIProviderUI();
 
         this.settingsModal.classList.add('active');
+    }
+
+    normalizeAIProvider(provider) {
+        const p = (provider || '').toString().trim().toLowerCase();
+        // 兼容旧版本存量配置
+        if (p === 'openai' || p === 'claude') return 'gemini';
+        if (p === 'zhipu' || p === 'gemini') return p;
+        return 'gemini';
+    }
+
+    updateAIProviderUI() {
+        const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'gemini');
+        if (!this.aiApiKeyInput) return;
+
+        if (provider === 'gemini') {
+            this.aiApiKeyInput.value = '';
+            this.aiApiKeyInput.disabled = true;
+            this.aiApiKeyInput.placeholder = 'Gemini 已使用服务方密钥，无需填写';
+            return;
+        }
+
+        this.aiApiKeyInput.disabled = false;
+        this.aiApiKeyInput.placeholder = '输入你的API Key';
     }
 
     hideSettingsModal() {
