@@ -2040,9 +2040,10 @@ class App {
 
     async fetchAIGeneratedSteps(taskName, stepType) {
         const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'gemini');
+        const proxyUrl = this.getAIProxyUrl();
         const apiKey = this.getAIKeyForProvider(apiProvider);
 
-        if (!apiKey) {
+        if (apiProvider !== 'gemini' && !apiKey) {
             throw new Error('未配置API Key，请前往设置页面配置');
         }
 
@@ -2088,6 +2089,32 @@ class App {
 
             return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else if (apiProvider === 'gemini') {
+            if (proxyUrl) {
+                this.setAIGeneratingStatus('请求 代理服务…');
+                response = await fetch(`${proxyUrl.replace(/\/$/, '')}/api/ai/steps`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        taskName,
+                        stepCountText,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`代理请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                this.setAIGeneratingStatus('解析结果…');
+                const steps = Array.isArray(data.steps) ? data.steps.map(s => String(s).trim()).filter(Boolean) : [];
+                return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
+            }
+
+            if (!apiKey) {
+                throw new Error('未配置代理服务或 Gemini Key');
+            }
+
             this.setAIGeneratingStatus('请求 Gemini…');
             response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
                 method: 'POST',
@@ -2121,6 +2148,14 @@ class App {
         } else {
             throw new Error('不支持的API提供商，请选择 智谱GLM 或 Gemini');
         }
+    }
+
+    getAIProxyUrl() {
+        const w = window.__AI_PROXY_URL__;
+        if (typeof w === 'string' && w.trim()) return w.trim();
+        const meta = document.querySelector('meta[name="ai-proxy-url"]')?.getAttribute('content');
+        if (typeof meta === 'string' && meta.trim()) return meta.trim();
+        return '';
     }
 
     getAIKeyForProvider(provider) {
@@ -2349,7 +2384,9 @@ class App {
         if (provider === 'gemini') {
             this.aiApiKeyInput.value = '';
             this.aiApiKeyInput.disabled = true;
-            this.aiApiKeyInput.placeholder = 'Gemini 已使用服务方密钥，无需填写';
+            this.aiApiKeyInput.placeholder = this.getAIProxyUrl()
+                ? 'Gemini 已使用代理服务，无需填写'
+                : 'Gemini 已使用服务方密钥，无需填写';
             return;
         }
 
