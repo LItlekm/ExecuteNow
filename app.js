@@ -1693,17 +1693,74 @@ class App {
 
         this.stepsEmpty.style.display = 'none';
         this.stepsList.innerHTML = this.tempSteps.map((step, index) => `
-            <div class="step-item">
+            <div class="step-item" data-index="${index}">
                 <span class="step-number">${index + 1}</span>
-                <span class="step-text">${escapeHtml(step)}</span>
+                <span class="step-text" data-index="${index}">${escapeHtml(step)}</span>
                 <button class="step-remove" data-index="${index}">&times;</button>
             </div>
         `).join('');
 
+        // 绑定删除按钮事件
         this.stepsList.querySelectorAll('.step-remove').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 this.removeStep(parseInt(btn.dataset.index));
             });
+        });
+
+        // 绑定步骤文本点击事件 - 进入编辑模式
+        this.stepsList.querySelectorAll('.step-text').forEach(span => {
+            span.addEventListener('click', () => {
+                this.enterStepEditMode(parseInt(span.dataset.index));
+            });
+        });
+    }
+
+    // 进入步骤编辑模式
+    enterStepEditMode(index) {
+        const stepItem = this.stepsList.querySelector(`.step-item[data-index="${index}"]`);
+        if (!stepItem) return;
+
+        const stepText = stepItem.querySelector('.step-text');
+        if (!stepText) return;
+
+        const currentText = this.tempSteps[index];
+
+        // 创建输入框替换文本
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'step-edit-input';
+        input.value = currentText;
+        input.maxLength = 100;
+
+        stepText.replaceWith(input);
+        input.focus();
+        input.select();
+
+        // 保存编辑
+        const saveEdit = () => {
+            const newText = input.value.trim();
+            if (newText) {
+                this.tempSteps[index] = newText;
+            }
+            this.renderStepsList();
+        };
+
+        // 取消编辑
+        const cancelEdit = () => {
+            this.renderStepsList();
+        };
+
+        // 事件监听
+        input.addEventListener('blur', saveEdit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.removeEventListener('blur', saveEdit);
+                cancelEdit();
+            }
         });
     }
 

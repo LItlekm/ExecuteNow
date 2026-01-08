@@ -4636,3 +4636,31 @@ body::before {
         align-items: center;
     }
 }
+
+/* ==================== 步骤编辑功能 ==================== */
+
+/* 步骤文本可点击提示 */
+.steps-preview .step-text {
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+}
+
+.steps-preview .step-text:hover {
+    background: var(--bg-secondary);
+}
+
+/* 步骤编辑输入框 */
+.step-edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid var(--accent-primary);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
+}
