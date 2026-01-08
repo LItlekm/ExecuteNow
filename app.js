@@ -2039,7 +2039,7 @@ class App {
     }
 
     async fetchAIGeneratedSteps(taskName, stepType) {
-        const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'gemini');
+        const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'zhipu');
         const proxyUrl = this.getAIProxyUrl();
         const apiKey = this.getAIKeyForProvider(apiProvider);
 
@@ -2068,7 +2068,7 @@ class App {
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'glm-4.7',
+                    model: 'glm-4.5-air',
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.7
                 })
@@ -2391,7 +2391,7 @@ class App {
 
         this.defaultCoachSelect.value = this.settingsManager.get('defaultCoach');
         this.vibrationToggle.checked = this.settingsManager.get('vibrationEnabled');
-        const storedProvider = this.settingsManager.get('aiProvider') || 'gemini';
+        const storedProvider = this.settingsManager.get('aiProvider') || 'zhipu';
         const normalizedProvider = this.normalizeAIProvider(storedProvider);
         if (storedProvider !== normalizedProvider) {
             this.settingsManager.set('aiProvider', normalizedProvider);
@@ -2406,13 +2406,13 @@ class App {
     normalizeAIProvider(provider) {
         const p = (provider || '').toString().trim().toLowerCase();
         // 兼容旧版本存量配置
-        if (p === 'openai' || p === 'claude') return 'gemini';
+        if (p === 'openai' || p === 'claude') return 'zhipu';
         if (p === 'zhipu' || p === 'gemini') return p;
-        return 'gemini';
+        return 'zhipu';
     }
 
     updateAIProviderUI() {
-        const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'gemini');
+        const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'zhipu');
         if (!this.aiApiKeyInput) return;
 
         if (provider === 'gemini') {
