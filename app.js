@@ -1727,20 +1727,11 @@ class App {
         this.generateStepsBtn.disabled = true;
 
         try {
-            // 1. 优先尝试本地模板匹配
-            const matchedSteps = this.matchLocalTemplate(taskName);
-
-            if (matchedSteps) {
-                // 本地匹配成功，不使用AI动画
-                await this.applyGeneratedSteps(matchedSteps, false);
-                this.showToast('已基于模板生成步骤', 'success');
-            } else {
-                // 2. 本地匹配失败，调用AI API
-                this.showAIGeneratingModal(taskName, this.selectedStepType);
-                const aiSteps = await this.fetchAIGeneratedSteps(taskName, this.selectedStepType);
-                await this.applyGeneratedSteps(aiSteps, true);
-                this.showToast('已通过AI生成步骤', 'success');
-            }
+            // 调用 AI 生成步骤
+            this.showAIGeneratingModal(taskName, this.selectedStepType);
+            const aiSteps = await this.fetchAIGeneratedSteps(taskName, this.selectedStepType);
+            await this.applyGeneratedSteps(aiSteps, true);
+            this.showToast('已通过AI生成步骤', 'success');
         } catch (error) {
             console.error('生成步骤失败:', error);
             this.showToast(error.message || '生成步骤失败，请手动添加', 'error');
@@ -1750,92 +1741,6 @@ class App {
             this.generateStepsBtn.classList.remove('loading');
             this.updateCreateButton();
         }
-    }
-
-    matchLocalTemplate(taskName) {
-        const normalizedName = taskName.toLowerCase().trim();
-
-        // 1. 精确匹配
-        let matched = TASK_TEMPLATES.find(t =>
-            t.name.toLowerCase() === normalizedName
-        );
-        if (matched) return this.adjustStepsForType(matched.steps);
-
-        // 2. 包含匹配
-        matched = TASK_TEMPLATES.find(t =>
-            normalizedName.includes(t.name.toLowerCase()) ||
-            t.name.toLowerCase().includes(normalizedName)
-        );
-        if (matched) return this.adjustStepsForType(matched.steps);
-
-        // 3. 关键词匹配表
-        const keywordMap = {
-            '日常': ['起床', '睡觉', '洗漱', '做饭', '清洁', '整理', '打扫'],
-            '工作': ['工作', '报告', '文档', '会议', '邮件', '开会', '写作'],
-            '学习': ['学习', '读书', '阅读', '复习', '作业', '笔记'],
-            '健康': ['运动', '锻炼', '健身', '跑步', '冥想', '瑜伽']
-        };
-
-        for (const [category, keywords] of Object.entries(keywordMap)) {
-            if (keywords.some(kw => normalizedName.includes(kw))) {
-                // 找到该分类下的第一个模板
-                matched = TASK_TEMPLATES.find(t => t.category === category);
-                if (matched) return this.adjustStepsForType(matched.steps);
-            }
-        }
-
-        return null; // 未匹配到
-    }
-
-    adjustStepsForType(steps) {
-        const pickEvenly = (items, count) => {
-            if (!Array.isArray(items)) return [];
-            if (count <= 0) return [];
-            if (items.length <= count) return items;
-
-            const indices = [];
-            const seen = new Set();
-            for (let i = 0; i < count; i++) {
-                const t = count === 1 ? 0 : (i / (count - 1));
-                const idx = Math.round((items.length - 1) * t);
-                if (!seen.has(idx)) {
-                    seen.add(idx);
-                    indices.push(idx);
-                }
-            }
-
-            // 如有重复索引导致数量不足，向后补齐
-            let cursor = 0;
-            while (indices.length < count && cursor < items.length) {
-                if (!seen.has(cursor)) {
-                    seen.add(cursor);
-                    indices.push(cursor);
-                }
-                cursor++;
-            }
-
-            indices.sort((a, b) => a - b);
-            return indices.slice(0, count).map(i => items[i]);
-        };
-
-        if (this.selectedStepType === 'simple') {
-            // 简约模式：取核心步骤（最多5个）
-            if (steps.length <= 5) return steps;
-            // 智能选取：首、中、尾的关键步骤
-            const interval = Math.floor(steps.length / 4);
-            return [
-                steps[0],
-                steps[interval],
-                steps[interval * 2],
-                steps[interval * 3],
-                steps[steps.length - 1]
-            ];
-        }
-        if (this.selectedStepType === 'custom') {
-            return pickEvenly(steps, this.customStepCount);
-        }
-        // 具体模式：返回所有步骤
-        return steps;
     }
 
     updateStepTypeUI() {
