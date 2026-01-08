@@ -234,11 +234,20 @@
                                 <span class="step-type-name">具体</span>
                                 <span class="step-type-desc">5-8个详细步骤</span>
                             </button>
+                            <button class="step-type-btn" data-type="custom">
+                                <span class="step-type-icon">⚙️</span>
+                                <span class="step-type-name">自定义</span>
+                                <span class="step-type-desc">3-10个可选步骤</span>
+                            </button>
                         </div>
                         <button id="generateStepsBtn" class="btn btn-secondary" disabled>
                             <span class="generate-icon">✨</span>
                             生成步骤
                         </button>
+                    </div>
+                    <div class="custom-step-count" id="customStepCount" style="display: none;">
+                        <label class="form-label-small">步骤数量：<span id="customStepCountValue">5</span></label>
+                        <input type="range" id="customStepCountInput" min="3" max="10" value="5">
                     </div>
                 </div>
 
@@ -397,6 +406,7 @@
                         <option value="openai">OpenAI (GPT-3.5)</option>
                         <option value="claude">Claude (Haiku)</option>
                         <option value="zhipu">智谱GLM (GLM-4.7)</option>
+                        <option value="gemini">Google Gemini (2.5 Flash)</option>
                     </select>
                 </div>
                 <div class="setting-item">
@@ -773,6 +783,25 @@
                     <span class="empty-icon">🔒</span>
                     <p class="empty-text" data-i18n="no_achievements">还没有解锁任何成就</p>
                     <p class="empty-hint" data-i18n="no_achievements_hint">继续使用应用来解锁成就吧！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 生成步骤动效弹窗 -->
+    <div class="modal-overlay" id="aiGeneratingModal">
+        <div class="modal ai-generating-modal">
+            <div class="ai-generating-content">
+                <div class="ai-generating-spinner">
+                    <div class="spinner"></div>
+                </div>
+                <div class="ai-generating-text">
+                    <div class="ai-generating-title">正在生成步骤</div>
+                    <div class="ai-generating-subtitle" id="aiGeneratingSubtitle">准备中…</div>
+                    <div class="ai-generating-status" id="aiGeneratingStatus">连接 AI</div>
+                </div>
+                <div class="ai-generating-dots" aria-hidden="true">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                 </div>
             </div>
         </div>

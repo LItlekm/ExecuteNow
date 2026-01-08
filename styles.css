@@ -3191,6 +3191,91 @@ body::before {
     flex: 1;
 }
 
+.custom-step-count {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.custom-step-count input[type="range"] {
+    width: 100%;
+    margin-top: var(--spacing-xs);
+}
+
+.form-label-small {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* ==================== AI 生成步骤弹窗 ==================== */
+
+.ai-generating-modal {
+    width: min(520px, 92vw);
+}
+
+.ai-generating-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+}
+
+.ai-generating-spinner .spinner {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary);
+    animation: spin 0.9s linear infinite;
+}
+
+.ai-generating-text {
+    flex: 1;
+}
+
+.ai-generating-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.ai-generating-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.ai-generating-status {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.ai-generating-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.ai-generating-dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    opacity: 0.5;
+    animation: dotPulse 1s infinite ease-in-out;
+}
+
+.ai-generating-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+.ai-generating-dots .dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes dotPulse {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-6px); opacity: 1; }
+}
+
 .step-type-btn {
     flex: 1;
     display: flex;

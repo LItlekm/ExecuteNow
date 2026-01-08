@@ -471,6 +471,9 @@ class App {
         this.taskNameInput = document.getElementById('taskNameInput');
         this.stepTypeSelector = document.querySelectorAll('.step-type-btn');
         this.generateStepsBtn = document.getElementById('generateStepsBtn');
+        this.customStepCountWrapper = document.getElementById('customStepCount');
+        this.customStepCountInput = document.getElementById('customStepCountInput');
+        this.customStepCountValue = document.getElementById('customStepCountValue');
         this.coachSelector = document.getElementById('coachSelector');
         this.stepInput = document.getElementById('stepInput');
         this.addStepBtn = document.getElementById('addStepBtn');
@@ -480,6 +483,12 @@ class App {
         this.cancelCreateTask = document.getElementById('cancelCreateTask');
         this.confirmCreateTask = document.getElementById('confirmCreateTask');
         this.selectedStepType = 'simple'; // 默认简约模式
+        this.customStepCount = 5;
+
+        // AI 生成步骤弹窗
+        this.aiGeneratingModal = document.getElementById('aiGeneratingModal');
+        this.aiGeneratingSubtitle = document.getElementById('aiGeneratingSubtitle');
+        this.aiGeneratingStatus = document.getElementById('aiGeneratingStatus');
 
         // 模板弹窗
         this.templateModal = document.getElementById('templateModal');
@@ -646,7 +655,16 @@ class App {
                 this.stepTypeSelector.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.selectedStepType = btn.dataset.type;
+                this.updateStepTypeUI();
             });
+        });
+
+        // 自定义步数（3-10）
+        this.customStepCountInput?.addEventListener('input', (e) => {
+            const raw = parseInt(e.target.value);
+            const clamped = Math.min(10, Math.max(3, Number.isFinite(raw) ? raw : 5));
+            this.customStepCount = clamped;
+            if (this.customStepCountValue) this.customStepCountValue.textContent = String(clamped);
         });
 
         // 生成步骤按钮
@@ -1590,11 +1608,15 @@ class App {
         this.tempSteps = [];
         this.selectedCoachId = this.settingsManager.get('defaultCoach');
         this.selectedStepType = 'simple'; // 重置步骤类型
+        this.customStepCount = 5;
+        if (this.customStepCountInput) this.customStepCountInput.value = '5';
+        if (this.customStepCountValue) this.customStepCountValue.textContent = '5';
 
         // 重置步骤类型按钮状态
         this.stepTypeSelector.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === 'simple');
         });
+        this.updateStepTypeUI();
 
         this.renderCoachSelector(this.coachSelector, this.selectedCoachId);
         this.renderStepsList();
@@ -1701,6 +1723,7 @@ class App {
                 this.showToast('已基于模板生成步骤', 'success');
             } else {
                 // 2. 本地匹配失败，调用AI API
+                this.showAIGeneratingModal(taskName, this.selectedStepType);
                 const aiSteps = await this.fetchAIGeneratedSteps(taskName, this.selectedStepType);
                 this.applyGeneratedSteps(aiSteps);
                 this.showToast('已通过AI生成步骤', 'success');
@@ -1709,6 +1732,7 @@ class App {
             console.error('生成步骤失败:', error);
             this.showToast(error.message || '生成步骤失败，请手动添加', 'error');
         } finally {
+            this.hideAIGeneratingModal();
             // 恢复按钮状态
             this.generateStepsBtn.classList.remove('loading');
             this.updateGenerateButton();
@@ -1751,6 +1775,36 @@ class App {
     }
 
     adjustStepsForType(steps) {
+        const pickEvenly = (items, count) => {
+            if (!Array.isArray(items)) return [];
+            if (count <= 0) return [];
+            if (items.length <= count) return items;
+
+            const indices = [];
+            const seen = new Set();
+            for (let i = 0; i < count; i++) {
+                const t = count === 1 ? 0 : (i / (count - 1));
+                const idx = Math.round((items.length - 1) * t);
+                if (!seen.has(idx)) {
+                    seen.add(idx);
+                    indices.push(idx);
+                }
+            }
+
+            // 如有重复索引导致数量不足，向后补齐
+            let cursor = 0;
+            while (indices.length < count && cursor < items.length) {
+                if (!seen.has(cursor)) {
+                    seen.add(cursor);
+                    indices.push(cursor);
+                }
+                cursor++;
+            }
+
+            indices.sort((a, b) => a - b);
+            return indices.slice(0, count).map(i => items[i]);
+        };
+
         if (this.selectedStepType === 'simple') {
             // 简约模式：取核心步骤（最多5个）
             if (steps.length <= 5) return steps;
@@ -1764,8 +1818,42 @@ class App {
                 steps[steps.length - 1]
             ];
         }
+        if (this.selectedStepType === 'custom') {
+            return pickEvenly(steps, this.customStepCount);
+        }
         // 具体模式：返回所有步骤
         return steps;
+    }
+
+    updateStepTypeUI() {
+        const isCustom = this.selectedStepType === 'custom';
+        if (this.customStepCountWrapper) {
+            this.customStepCountWrapper.style.display = isCustom ? 'block' : 'none';
+        }
+    }
+
+    showAIGeneratingModal(taskName, stepType) {
+        if (!this.aiGeneratingModal) return;
+
+        const stepText = (stepType === 'custom')
+            ? `${this.customStepCount} 个步骤`
+            : (stepType === 'simple' ? '3-5 个步骤' : '5-8 个步骤');
+
+        if (this.aiGeneratingSubtitle) {
+            this.aiGeneratingSubtitle.textContent = `任务「${taskName}」· ${stepText}`;
+        }
+        this.setAIGeneratingStatus('准备提示词…');
+        this.aiGeneratingModal.classList.add('active');
+    }
+
+    setAIGeneratingStatus(text) {
+        if (!this.aiGeneratingStatus) return;
+        this.aiGeneratingStatus.textContent = text;
+    }
+
+    hideAIGeneratingModal() {
+        if (!this.aiGeneratingModal) return;
+        this.aiGeneratingModal.classList.remove('active');
     }
 
     async fetchAIGeneratedSteps(taskName, stepType) {
@@ -1776,8 +1864,11 @@ class App {
             throw new Error('未配置API Key，请前往设置页面配置');
         }
 
-        const stepCount = stepType === 'simple' ? '3-5' : '5-8';
-        const prompt = `请为任务"${taskName}"生成${stepCount}个具体可执行的步骤。
+        const stepCountText = stepType === 'custom'
+            ? String(this.customStepCount)
+            : (stepType === 'simple' ? '3-5' : '5-8');
+
+        const prompt = `请为任务"${taskName}"生成${stepCountText}个具体可执行的步骤。
 要求：
 1. 每个步骤都是简短的行动指令（不超过100字符）
 2. 步骤从简单到复杂递进
@@ -1786,6 +1877,7 @@ class App {
 
         let response;
         if (apiProvider === 'openai') {
+            this.setAIGeneratingStatus('请求 OpenAI…');
             response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -1805,14 +1897,16 @@ class App {
 
             const data = await response.json();
             const content = data.choices[0].message.content;
+            this.setAIGeneratingStatus('解析结果…');
             const steps = content
                 .split('\n')
                 .filter(s => s.trim())
                 .map(s => s.replace(/^\d+\.\s*/, '').trim())
                 .filter(s => s.length > 0);
 
-            return steps;
+            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else if (apiProvider === 'claude') {
+            this.setAIGeneratingStatus('请求 Claude…');
             response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: {
@@ -1833,14 +1927,16 @@ class App {
 
             const data = await response.json();
             const content = data.content[0].text;
+            this.setAIGeneratingStatus('解析结果…');
             const steps = content
                 .split('\n')
                 .filter(s => s.trim())
                 .map(s => s.replace(/^\d+\.\s*/, '').trim())
                 .filter(s => s.length > 0);
 
-            return steps;
+            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else if (apiProvider === 'zhipu') {
+            this.setAIGeneratingStatus('请求 智谱GLM…');
             response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -1860,15 +1956,47 @@ class App {
 
             const data = await response.json();
             const content = data.choices[0].message.content;
+            this.setAIGeneratingStatus('解析结果…');
             const steps = content
                 .split('\n')
                 .filter(s => s.trim())
                 .map(s => s.replace(/^\d+\.\s*/, '').trim())
                 .filter(s => s.length > 0);
 
-            return steps;
+            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
+        } else if (apiProvider === 'gemini') {
+            this.setAIGeneratingStatus('请求 Gemini…');
+            response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey
+                },
+                body: JSON.stringify({
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 1024
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gemini API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
+            this.setAIGeneratingStatus('解析结果…');
+            const steps = content
+                .split('\n')
+                .filter(s => s.trim())
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 0);
+
+            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else {
-            throw new Error('不支持的API提供商，请选择 OpenAI、Claude 或智谱GLM');
+            throw new Error('不支持的API提供商，请选择 OpenAI、Claude、智谱GLM 或 Gemini');
         }
     }
 
