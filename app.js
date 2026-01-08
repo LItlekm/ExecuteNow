@@ -2043,7 +2043,7 @@ class App {
         const proxyUrl = this.getAIProxyUrl();
         const apiKey = this.getAIKeyForProvider(apiProvider);
 
-        if (apiProvider !== 'gemini' && !apiKey) {
+        if (apiProvider !== 'gemini' && !proxyUrl && !apiKey) {
             throw new Error('未配置API Key，请前往设置页面配置');
         }
 
@@ -2060,6 +2060,32 @@ class App {
 
         let response;
         if (apiProvider === 'zhipu') {
+            if (proxyUrl) {
+                this.setAIGeneratingStatus('请求 代理服务…');
+                response = await fetch(`${proxyUrl.replace(/\/$/, '')}/api/ai/steps`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'zhipu',
+                        taskName,
+                        stepCountText,
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const detail = (typeof data.detail === 'string' && data.detail.trim())
+                        ? data.detail.trim()
+                        : (typeof data.error === 'string' ? data.error : '');
+                    throw new Error(`代理请求失败: ${response.status}${detail ? ` - ${detail}` : ''}`);
+                }
+
+                this.setAIGeneratingStatus('解析结果…');
+                const steps = Array.isArray(data.steps) ? data.steps.map(s => String(s).trim()).filter(Boolean) : [];
+                return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
+            }
+
             this.setAIGeneratingStatus('请求 智谱GLM…');
             response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
                 method: 'POST',
@@ -2095,6 +2121,7 @@ class App {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        provider: 'gemini',
                         taskName,
                         stepCountText,
                         temperature: 0.7
@@ -2414,6 +2441,13 @@ class App {
     updateAIProviderUI() {
         const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'zhipu');
         if (!this.aiApiKeyInput) return;
+
+        if (provider === 'zhipu' && this.getAIProxyUrl()) {
+            this.aiApiKeyInput.value = '';
+            this.aiApiKeyInput.disabled = true;
+            this.aiApiKeyInput.placeholder = '智谱GLM 已使用代理服务，无需填写';
+            return;
+        }
 
         if (provider === 'gemini') {
             this.aiApiKeyInput.value = '';

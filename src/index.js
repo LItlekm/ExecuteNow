@@ -28,11 +28,8 @@ export default {
       return new Response("Forbidden origin", { status: 403, headers: corsHeaders });
     }
 
-    if (!env.GEMINI_API_KEY) {
-      return Response.json({ error: "missing_server_key" }, { status: 500, headers: corsHeaders });
-    }
-
     const body = await request.json().catch(() => ({}));
+    const provider = (body.provider || "zhipu").toString().trim().toLowerCase();
     const taskName = (body.taskName || "").toString().trim();
     const stepCountText = (body.stepCountText || "5-8").toString().trim();
     const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
@@ -48,38 +45,65 @@ export default {
 3. 步骤要足够具体，能立即执行
 4. 只返回步骤内容，每行一个步骤，不需要编号`;
 
-    const resp = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
+    let resp;
+    if (provider === "gemini") {
+      if (!env.GEMINI_API_KEY) {
+        return Response.json({ error: "missing_server_key", provider }, { status: 500, headers: corsHeaders });
+      }
+
+      resp = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": env.GEMINI_API_KEY
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature, maxOutputTokens: 1024 }
+          })
+        }
+      );
+    } else if (provider === "zhipu") {
+      if (!env.ZHIPU_API_KEY) {
+        return Response.json({ error: "missing_server_key", provider }, { status: 500, headers: corsHeaders });
+      }
+
+      resp = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY
+          "Authorization": `Bearer ${env.ZHIPU_API_KEY}`
         },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature, maxOutputTokens: 1024 }
+          model: "glm-4.5-air",
+          messages: [{ role: "user", content: prompt }],
+          temperature
         })
-      }
-    );
+      });
+    } else {
+      return Response.json({ error: "unsupported_provider", provider }, { status: 400, headers: corsHeaders });
+    }
 
     if (!resp.ok) {
       const detail = await resp.text();
       return Response.json(
-        { error: "gemini_failed", status: resp.status, detail },
+        { error: "upstream_failed", provider, status: resp.status, detail },
         { status: 502, headers: corsHeaders }
       );
     }
 
     const data = await resp.json();
-    const content =
-      data?.candidates?.[0]?.content?.parts?.map(p => p.text).join("\n") || "";
+    const content = (provider === "gemini")
+      ? (data?.candidates?.[0]?.content?.parts?.map(p => p.text).join("\n") || "")
+      : (data?.choices?.[0]?.message?.content || "");
 
     const steps = content
       .split("\n")
       .map(s => s.replace(/^\d+\.\s*/, "").trim())
       .filter(Boolean);
 
-    return Response.json({ steps }, { headers: corsHeaders });
+    return Response.json({ provider, steps }, { headers: corsHeaders });
   }
 };
