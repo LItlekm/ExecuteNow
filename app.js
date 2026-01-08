@@ -486,9 +486,19 @@ class App {
         this.customStepCount = 5;
 
         // AI 生成步骤弹窗
+        // AI生成弹窗 - 新UI元素
         this.aiGeneratingModal = document.getElementById('aiGeneratingModal');
-        this.aiGeneratingSubtitle = document.getElementById('aiGeneratingSubtitle');
-        this.aiGeneratingStatus = document.getElementById('aiGeneratingStatus');
+        this.aiThinkingStage = document.getElementById('aiThinkingStage');
+        this.aiStepsStage = document.getElementById('aiStepsStage');
+        this.aiCompleteStage = document.getElementById('aiCompleteStage');
+        this.thinkingTaskName = document.getElementById('thinkingTaskName');
+        this.stepsContainer = document.getElementById('stepsContainer');
+        this.generatedStepsCount = document.getElementById('generatedStepsCount');
+        this.totalStepsCount = document.getElementById('totalStepsCount');
+
+        // 兼容旧元素名（保持向后兼容）
+        this.aiGeneratingSubtitle = null;
+        this.aiGeneratingStatus = null;
 
         // 模板弹窗
         this.templateModal = document.getElementById('templateModal');
@@ -1718,24 +1728,24 @@ class App {
             const matchedSteps = this.matchLocalTemplate(taskName);
 
             if (matchedSteps) {
-                // 本地匹配成功
-                this.applyGeneratedSteps(matchedSteps);
+                // 本地匹配成功，不使用AI动画
+                await this.applyGeneratedSteps(matchedSteps, false);
                 this.showToast('已基于模板生成步骤', 'success');
             } else {
                 // 2. 本地匹配失败，调用AI API
                 this.showAIGeneratingModal(taskName, this.selectedStepType);
                 const aiSteps = await this.fetchAIGeneratedSteps(taskName, this.selectedStepType);
-                this.applyGeneratedSteps(aiSteps);
+                await this.applyGeneratedSteps(aiSteps, true);
                 this.showToast('已通过AI生成步骤', 'success');
             }
         } catch (error) {
             console.error('生成步骤失败:', error);
             this.showToast(error.message || '生成步骤失败，请手动添加', 'error');
         } finally {
-            this.hideAIGeneratingModal();
+            await this.hideAIGeneratingModal();
             // 恢复按钮状态
             this.generateStepsBtn.classList.remove('loading');
-            this.updateGenerateButton();
+            this.updateCreateButton();
         }
     }
 
@@ -1835,24 +1845,179 @@ class App {
     showAIGeneratingModal(taskName, stepType) {
         if (!this.aiGeneratingModal) return;
 
-        const stepText = (stepType === 'custom')
-            ? `${this.customStepCount} 个步骤`
-            : (stepType === 'simple' ? '3-5 个步骤' : '5-8 个步骤');
+        // 重置所有阶段
+        this.resetAIGeneratingStages();
 
-        if (this.aiGeneratingSubtitle) {
-            this.aiGeneratingSubtitle.textContent = `任务「${taskName}」· ${stepText}`;
+        // 设置任务名称
+        if (this.thinkingTaskName) {
+            this.thinkingTaskName.textContent = `「${taskName}」`;
         }
-        this.setAIGeneratingStatus('准备提示词…');
+
+        // 估算总步骤数
+        const estimatedSteps = stepType === 'custom'
+            ? this.customStepCount
+            : (stepType === 'simple' ? 4 : 6);
+        if (this.totalStepsCount) {
+            this.totalStepsCount.textContent = estimatedSteps;
+        }
+        if (this.generatedStepsCount) {
+            this.generatedStepsCount.textContent = '0';
+        }
+
+        // 显示思考阶段
+        this.showThinkingStage();
+
+        // 显示弹窗
         this.aiGeneratingModal.classList.add('active');
     }
 
-    setAIGeneratingStatus(text) {
-        if (!this.aiGeneratingStatus) return;
-        this.aiGeneratingStatus.textContent = text;
+    resetAIGeneratingStages() {
+        // 隐藏所有阶段
+        if (this.aiThinkingStage) {
+            this.aiThinkingStage.classList.remove('hidden');
+            this.aiThinkingStage.style.display = 'flex';
+        }
+        if (this.aiStepsStage) {
+            this.aiStepsStage.classList.remove('active', 'hidden');
+            this.aiStepsStage.style.display = 'none';
+        }
+        if (this.aiCompleteStage) {
+            this.aiCompleteStage.classList.remove('active', 'hidden');
+            this.aiCompleteStage.style.display = 'none';
+        }
+
+        // 清空步骤容器
+        if (this.stepsContainer) {
+            this.stepsContainer.innerHTML = '';
+        }
+
+        // 重置步骤计数
+        this.currentGeneratedStepCount = 0;
     }
 
-    hideAIGeneratingModal() {
+    showThinkingStage() {
+        if (!this.aiThinkingStage) return;
+
+        // 隐藏其他阶段，显示思考阶段
+        if (this.aiStepsStage) this.aiStepsStage.classList.add('hidden');
+        if (this.aiCompleteStage) this.aiCompleteStage.classList.add('hidden');
+        this.aiThinkingStage.classList.remove('hidden');
+        this.aiThinkingStage.style.display = 'flex';
+    }
+
+    showStepsStage() {
+        if (!this.aiStepsStage) return;
+
+        // 隐藏思考阶段，显示步骤阶段
+        if (this.aiThinkingStage) {
+            this.aiThinkingStage.classList.add('hidden');
+            this.aiThinkingStage.style.display = 'none';
+        }
+        this.aiStepsStage.classList.remove('hidden');
+        this.aiStepsStage.classList.add('active');
+        this.aiStepsStage.style.display = 'flex';
+    }
+
+    showCompleteStage() {
+        if (!this.aiCompleteStage) return;
+
+        // 隐藏其他阶段，显示完成阶段
+        if (this.aiThinkingStage) {
+            this.aiThinkingStage.classList.add('hidden');
+            this.aiThinkingStage.style.display = 'none';
+        }
+        if (this.aiStepsStage) {
+            this.aiStepsStage.classList.add('hidden');
+            this.aiStepsStage.style.display = 'none';
+        }
+        this.aiCompleteStage.classList.remove('hidden');
+        this.aiCompleteStage.classList.add('active');
+        this.aiCompleteStage.style.display = 'flex';
+    }
+
+    addGeneratedStep(stepText, index) {
+        if (!this.stepsContainer) return;
+
+        // 如果是第一步，切换到步骤生成阶段
+        if (index === 0) {
+            this.showStepsStage();
+        }
+
+        // 创建步骤卡片
+        const stepCard = document.createElement('div');
+        stepCard.className = 'generated-step-card';
+        stepCard.style.animationDelay = `${index * 0.1}s`;
+
+        const stepNumber = document.createElement('div');
+        stepNumber.className = 'generated-step-number';
+        stepNumber.textContent = index + 1;
+
+        const stepTextElement = document.createElement('div');
+        stepTextElement.className = 'generated-step-text';
+
+        // 打字机效果
+        this.typewriterEffect(stepTextElement, stepText, 20 + index * 30);
+
+        stepCard.appendChild(stepNumber);
+        stepCard.appendChild(stepTextElement);
+        this.stepsContainer.appendChild(stepCard);
+
+        // 自动滚动到底部
+        setTimeout(() => {
+            if (this.stepsContainer) {
+                this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+            }
+        }, 100);
+
+        // 更新计数
+        this.currentGeneratedStepCount = index + 1;
+        if (this.generatedStepsCount) {
+            this.generatedStepsCount.textContent = this.currentGeneratedStepCount;
+        }
+    }
+
+    typewriterEffect(element, text, delay = 30) {
+        let index = 0;
+        element.textContent = '';
+
+        // 添加光标
+        const cursor = document.createElement('span');
+        cursor.className = 'typewriter-cursor';
+        element.appendChild(cursor);
+
+        const typeNextChar = () => {
+            if (index < text.length) {
+                cursor.before(text.charAt(index));
+                index++;
+                setTimeout(typeNextChar, delay);
+            } else {
+                // 打字完成，移除光标
+                setTimeout(() => {
+                    cursor.remove();
+                }, 500);
+            }
+        };
+
+        typeNextChar();
+    }
+
+    setAIGeneratingStatus(text) {
+        // 兼容旧代码，这个方法现在不需要做任何事情
+        // 因为新的UI不使用状态文字
+    }
+
+    async hideAIGeneratingModal() {
         if (!this.aiGeneratingModal) return;
+
+        // 只在弹窗激活时显示完成状态
+        if (this.aiGeneratingModal.classList.contains('active')) {
+            // 短暂显示完成状态
+            this.showCompleteStage();
+
+            // 延迟后关闭弹窗
+            await new Promise(resolve => setTimeout(resolve, 1200));
+        }
+
         this.aiGeneratingModal.classList.remove('active');
     }
 
@@ -2000,14 +2165,29 @@ class App {
         }
     }
 
-    applyGeneratedSteps(steps) {
+    async applyGeneratedSteps(steps, isAI = true) {
         // 询问是否替换现有步骤（如果已有步骤）
         if (this.tempSteps.length > 0) {
             if (!confirm('当前已有步骤，是否替换为生成的步骤？')) {
+                this.hideAIGeneratingModal();
                 return;
             }
         }
 
+        // 如果是AI生成的步骤，逐步展示动画
+        if (isAI && this.aiGeneratingModal && this.aiGeneratingModal.classList.contains('active')) {
+            // 逐个添加步骤卡片
+            for (let i = 0; i < steps.length; i++) {
+                this.addGeneratedStep(steps[i], i);
+                // 每个步骤之间有延迟
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            // 等待打字机效果完成
+            await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        // 应用步骤到实际列表
         this.tempSteps = [...steps];
         this.renderStepsList();
         this.updateCreateButton();
