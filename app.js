@@ -2101,11 +2101,15 @@ class App {
                     })
                 });
 
+                const data = await response.json().catch(() => ({}));
+
                 if (!response.ok) {
-                    throw new Error(`代理请求失败: ${response.status}`);
+                    const detail = (typeof data.detail === 'string' && data.detail.trim())
+                        ? data.detail.trim()
+                        : (typeof data.error === 'string' ? data.error : '');
+                    throw new Error(`代理请求失败: ${response.status}${detail ? ` - ${detail}` : ''}`);
                 }
 
-                const data = await response.json();
                 this.setAIGeneratingStatus('解析结果…');
                 const steps = Array.isArray(data.steps) ? data.steps.map(s => String(s).trim()).filter(Boolean) : [];
                 return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
@@ -2148,6 +2152,36 @@ class App {
         } else {
             throw new Error('不支持的API提供商，请选择 智谱GLM 或 Gemini');
         }
+    }
+
+    showToast(message, type = 'info') {
+        const text = (message ?? '').toString().trim();
+        if (!text) return;
+
+        if (!this._toastContainer) {
+            this._toastContainer = document.createElement('div');
+            this._toastContainer.className = 'toast-container';
+            document.body.appendChild(this._toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = text;
+        this._toastContainer.appendChild(toast);
+
+        void toast.offsetWidth;
+        toast.classList.add('show');
+
+        const timeout = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 250);
+        }, 2600);
+
+        toast.addEventListener('click', () => {
+            clearTimeout(timeout);
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 150);
+        });
     }
 
     getAIProxyUrl() {
