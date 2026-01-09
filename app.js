@@ -1813,17 +1813,16 @@ class App {
         // 重置所有阶段
         this.resetAIGeneratingStages();
 
-        // 获取当前选择的教练信息
+        // 获取当前选择的教练信息（直接从 COACHES 数组获取以确保头像正确）
         const coachId = this.selectedCoachId || this.settingsManager.get('defaultCoach') || 'gentle';
-        const coachData = this.i18n.getCoachData(coachId);
-        const coachName = coachData.name;
+        const coach = COACHES.find(c => c.id === coachId) || COACHES[0];
 
         // 设置教练头像和标签
         if (this.thinkingCoachAvatar) {
-            this.thinkingCoachAvatar.textContent = coachData.avatar || '👩';
+            this.thinkingCoachAvatar.textContent = coach.avatar;
         }
         if (this.thinkingLabel) {
-            this.thinkingLabel.textContent = `${coachName}正在努力思考如何拆解`;
+            this.thinkingLabel.textContent = `${coach.name}正在努力思考如何拆解`;
         }
 
         // 设置任务名称
@@ -1938,6 +1937,9 @@ class App {
         stepCard.appendChild(stepTextElement);
         this.stepsContainer.appendChild(stepCard);
 
+        // 立即滚动到新添加的步骤，确保用户能看到正在生成的内容
+        this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+
         // 更新计数
         this.currentGeneratedStepCount = index + 1;
         if (this.generatedStepsCount) {
@@ -1962,6 +1964,10 @@ class App {
                 if (index < text.length) {
                     cursor.before(text.charAt(index));
                     index++;
+                    // 打字过程中持续滚动，确保正在输入的内容始终可见
+                    if (this.stepsContainer) {
+                        this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+                    }
                     setTimeout(typeNextChar, delay);
                 } else {
                     // 打字完成，等待短暂时间后移除光标并resolve
