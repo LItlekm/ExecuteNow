@@ -2001,11 +2001,11 @@ class App {
     }
 
     async fetchAIGeneratedSteps(taskName, stepType) {
-        const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'zhipu');
+        const apiProvider = this.normalizeAIProvider(this.settingsManager.get('aiProvider') || 'deepseek');
         const proxyUrl = this.getAIProxyUrl();
         const apiKey = this.getAIKeyForProvider(apiProvider);
 
-        if (apiProvider !== 'gemini' && !proxyUrl && !apiKey) {
+        if (!proxyUrl && !apiKey) {
             throw new Error('未配置API Key，请前往设置页面配置');
         }
 
@@ -2076,68 +2076,6 @@ class App {
                 .filter(s => s.length > 0);
 
             return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
-        } else if (apiProvider === 'gemini') {
-            if (proxyUrl) {
-                this.setAIGeneratingStatus('请求 代理服务…');
-                response = await fetch(`${proxyUrl.replace(/\/$/, '')}/api/ai/steps`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        provider: 'gemini',
-                        taskName,
-                        stepCountText,
-                        temperature: 0.7
-                    })
-                });
-
-                const data = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                    const detail = (typeof data.detail === 'string' && data.detail.trim())
-                        ? data.detail.trim()
-                        : (typeof data.error === 'string' ? data.error : '');
-                    throw new Error(`代理请求失败: ${response.status}${detail ? ` - ${detail}` : ''}`);
-                }
-
-                this.setAIGeneratingStatus('解析结果…');
-                const steps = Array.isArray(data.steps) ? data.steps.map(s => String(s).trim()).filter(Boolean) : [];
-                return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
-            }
-
-            if (!apiKey) {
-                throw new Error('未配置代理服务或 Gemini Key');
-            }
-
-            this.setAIGeneratingStatus('请求 Gemini…');
-            response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': apiKey
-                },
-                body: JSON.stringify({
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 1024
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Gemini API请求失败: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const content = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
-            this.setAIGeneratingStatus('解析结果…');
-            const steps = content
-                .split('\n')
-                .filter(s => s.trim())
-                .map(s => s.replace(/^\d+\.\s*/, '').trim())
-                .filter(s => s.length > 0);
-
-            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else if (apiProvider === 'deepseek') {
             // Deepseek 通过代理服务
             if (proxyUrl) {
@@ -2200,7 +2138,7 @@ class App {
 
             return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else {
-            throw new Error('不支持的API提供商，请选择 智谱GLM、Gemini 或 Deepseek');
+            throw new Error('不支持的API提供商，请选择 Deepseek 或 智谱GLM');
         }
     }
 
@@ -2244,18 +2182,6 @@ class App {
 
     getAIKeyForProvider(provider) {
         const normalized = this.normalizeAIProvider(provider);
-        if (normalized === 'gemini') {
-            // 服务方提供（运行时注入）：window.__GEMINI_API_KEY__ = '...'
-            const builtin = window.__GEMINI_API_KEY__;
-            if (typeof builtin === 'string' && builtin.trim()) return builtin.trim();
-
-            // 或者通过 meta 注入：<meta name="gemini-api-key" content="...">
-            const metaKey = document.querySelector('meta[name="gemini-api-key"]')?.getAttribute('content');
-            if (typeof metaKey === 'string' && metaKey.trim()) return metaKey.trim();
-
-            return '';
-        }
-
         if (normalized === 'deepseek') {
             // 服务方提供（运行时注入）：window.__DEEPSEEK_API_KEY__ = '...'
             const builtin = window.__DEEPSEEK_API_KEY__;
@@ -2455,7 +2381,7 @@ class App {
 
         this.defaultCoachSelect.value = this.settingsManager.get('defaultCoach');
         this.vibrationToggle.checked = this.settingsManager.get('vibrationEnabled');
-        const storedProvider = this.settingsManager.get('aiProvider') || 'zhipu';
+        const storedProvider = this.settingsManager.get('aiProvider') || 'deepseek';
         const normalizedProvider = this.normalizeAIProvider(storedProvider);
         if (storedProvider !== normalizedProvider) {
             this.settingsManager.set('aiProvider', normalizedProvider);
@@ -2470,28 +2396,19 @@ class App {
     normalizeAIProvider(provider) {
         const p = (provider || '').toString().trim().toLowerCase();
         // 兼容旧版本存量配置
-        if (p === 'openai' || p === 'claude') return 'zhipu';
-        if (p === 'zhipu' || p === 'gemini' || p === 'deepseek') return p;
-        return 'zhipu';
+        if (p === 'openai' || p === 'claude' || p === 'gemini') return 'deepseek';
+        if (p === 'zhipu' || p === 'deepseek') return p;
+        return 'deepseek';
     }
 
     updateAIProviderUI() {
-        const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'zhipu');
+        const provider = this.normalizeAIProvider(this.aiProviderSelect?.value || this.settingsManager.get('aiProvider') || 'deepseek');
         if (!this.aiApiKeyInput) return;
 
         if (provider === 'zhipu' && this.getAIProxyUrl()) {
             this.aiApiKeyInput.value = '';
             this.aiApiKeyInput.disabled = true;
             this.aiApiKeyInput.placeholder = '智谱GLM 已使用代理服务，无需填写';
-            return;
-        }
-
-        if (provider === 'gemini') {
-            this.aiApiKeyInput.value = '';
-            this.aiApiKeyInput.disabled = true;
-            this.aiApiKeyInput.placeholder = this.getAIProxyUrl()
-                ? 'Gemini 已使用代理服务，无需填写'
-                : 'Gemini 已使用服务方密钥，无需填写';
             return;
         }
 
