@@ -3612,9 +3612,7 @@ body::before {
 }
 
 .step-type-desc {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    white-space: nowrap;
+    display: none;
 }
 
 #generateStepsBtn {
@@ -4375,10 +4373,6 @@ body::before {
     .step-type-btn {
         min-height: 56px;
         padding: var(--spacing-xs);
-    }
-
-    .step-type-desc {
-        display: none;
     }
 
     #generateStepsBtn {
