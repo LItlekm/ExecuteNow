@@ -122,6 +122,24 @@ exports.main_handler = async (event, context) => {
                     temperature
                 })
             });
+        } else if (provider === "deepseek") {
+            const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+            if (!DEEPSEEK_API_KEY) {
+                return createResponse(500, { error: "missing_server_key", provider }, origin);
+            }
+
+            resp = await fetch("https://api.deepseek.com/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [{ role: "user", content: prompt }],
+                    temperature
+                })
+            });
         } else {
             return createResponse(400, { error: "unsupported_provider", provider }, origin);
         }

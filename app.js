@@ -2138,8 +2138,69 @@ class App {
                 .filter(s => s.length > 0);
 
             return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
+        } else if (apiProvider === 'deepseek') {
+            // Deepseek 通过代理服务
+            if (proxyUrl) {
+                this.setAIGeneratingStatus('请求 代理服务…');
+                response = await fetch(`${proxyUrl.replace(/\/$/, '')}/api/ai/steps`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'deepseek',
+                        taskName,
+                        stepCountText,
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const detail = (typeof data.detail === 'string' && data.detail.trim())
+                        ? data.detail.trim()
+                        : (typeof data.error === 'string' ? data.error : '');
+                    throw new Error(`代理请求失败: ${response.status}${detail ? ` - ${detail}` : ''}`);
+                }
+
+                this.setAIGeneratingStatus('解析结果…');
+                const steps = Array.isArray(data.steps) ? data.steps.map(s => String(s).trim()).filter(Boolean) : [];
+                return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
+            }
+
+            // Deepseek 直接调用（需要 API Key）
+            if (!apiKey) {
+                throw new Error('未配置代理服务或 Deepseek API Key');
+            }
+
+            this.setAIGeneratingStatus('请求 Deepseek…');
+            response = await fetch('https://api.deepseek.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'deepseek-chat',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Deepseek API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            this.setAIGeneratingStatus('解析结果…');
+            const steps = content
+                .split('\n')
+                .filter(s => s.trim())
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 0);
+
+            return (stepType === 'custom') ? steps.slice(0, this.customStepCount) : steps;
         } else {
-            throw new Error('不支持的API提供商，请选择 智谱GLM 或 Gemini');
+            throw new Error('不支持的API提供商，请选择 智谱GLM、Gemini 或 Deepseek');
         }
     }
 
@@ -2193,6 +2254,20 @@ class App {
             if (typeof metaKey === 'string' && metaKey.trim()) return metaKey.trim();
 
             return '';
+        }
+
+        if (normalized === 'deepseek') {
+            // 服务方提供（运行时注入）：window.__DEEPSEEK_API_KEY__ = '...'
+            const builtin = window.__DEEPSEEK_API_KEY__;
+            if (typeof builtin === 'string' && builtin.trim()) return builtin.trim();
+
+            // 或者通过 meta 注入：<meta name="deepseek-api-key" content="...">
+            const metaKey = document.querySelector('meta[name="deepseek-api-key"]')?.getAttribute('content');
+            if (typeof metaKey === 'string' && metaKey.trim()) return metaKey.trim();
+
+            // 用户配置的 API Key
+            const configured = this.settingsManager.get('aiApiKey');
+            return (typeof configured === 'string' && configured.trim()) ? configured.trim() : '';
         }
 
         const configured = this.settingsManager.get('aiApiKey');
@@ -2396,7 +2471,7 @@ class App {
         const p = (provider || '').toString().trim().toLowerCase();
         // 兼容旧版本存量配置
         if (p === 'openai' || p === 'claude') return 'zhipu';
-        if (p === 'zhipu' || p === 'gemini') return p;
+        if (p === 'zhipu' || p === 'gemini' || p === 'deepseek') return p;
         return 'zhipu';
     }
 
@@ -2417,6 +2492,13 @@ class App {
             this.aiApiKeyInput.placeholder = this.getAIProxyUrl()
                 ? 'Gemini 已使用代理服务，无需填写'
                 : 'Gemini 已使用服务方密钥，无需填写';
+            return;
+        }
+
+        if (provider === 'deepseek' && this.getAIProxyUrl()) {
+            this.aiApiKeyInput.value = '';
+            this.aiApiKeyInput.disabled = true;
+            this.aiApiKeyInput.placeholder = 'Deepseek 已使用代理服务，无需填写';
             return;
         }
 
