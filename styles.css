@@ -1551,11 +1551,12 @@ body::before {
     flex: 1;
 }
 
-/* 教练选择器 */
+/* 教练选择器 - 紧凑版 */
 .coach-selector {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: var(--spacing-xs) 0;
 }
 
 .coach-option {
@@ -1563,44 +1564,61 @@ body::before {
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-xs);
-    padding: var(--spacing-md);
-    background: var(--bg-tertiary);
-    border: 2px solid transparent;
+    padding: var(--spacing-xs);
+    background: transparent;
+    border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: all var(--transition-fast);
+    min-width: 64px;
 }
 
 .coach-option:hover {
-    background: var(--btn-secondary-hover);
-    transform: translateY(-2px);
-}
-
-.coach-option.selected {
-    border-color: var(--accent-primary);
-    background: rgba(124, 92, 255, 0.1);
-    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.1);
-}
-
-.coach-option-avatar {
-    font-size: 2rem;
-    transition: transform var(--transition-bounce);
+    background: transparent;
 }
 
 .coach-option:hover .coach-option-avatar {
-    transform: scale(1.2);
+    transform: scale(1.1);
+}
+
+.coach-option.selected .coach-option-avatar {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--accent-primary),
+                0 0 16px rgba(124, 92, 255, 0.4);
+}
+
+.coach-option-avatar {
+    font-size: 1.8rem;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    transition: all var(--transition-bounce);
+}
+
+.coach-option.selected .coach-option-avatar {
+    border-color: var(--accent-primary);
 }
 
 .coach-option-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color var(--transition-fast);
 }
 
+.coach-option.selected .coach-option-name {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* 隐藏描述文字 */
 .coach-option-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-align: center;
+    display: none;
 }
 
 /* 步骤预览 */
@@ -1898,7 +1916,22 @@ body::before {
     }
 
     .coach-selector {
-        grid-template-columns: 1fr;
+        justify-content: space-between;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    .coach-option {
+        min-width: 56px;
+    }
+
+    .coach-option-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+
+    .coach-option-name {
+        font-size: 0.7rem;
     }
 
     .template-grid {
@@ -3171,23 +3204,27 @@ body::before {
     border-radius: 4px;
 }
 
-/* 步骤生成器 */
+/* 步骤生成器 - 紧凑优化版 */
 .step-generator {
-    border: 2px dashed var(--border-color);
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: var(--bg-tertiary);
+}
+
+.step-generator .form-label {
+    margin-bottom: var(--spacing-xs);
 }
 
 .step-generator-row {
     display: flex;
-    gap: var(--spacing-md);
-    align-items: flex-start;
+    gap: var(--spacing-sm);
+    align-items: stretch;
 }
 
 .step-type-selector {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     flex: 1;
 }
 
@@ -3538,17 +3575,19 @@ body::before {
 }
 
 .step-type-btn {
-    flex: 1;
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-md);
+    justify-content: center;
+    gap: 2px;
+    padding: var(--spacing-xs) var(--spacing-sm);
     border: 2px solid var(--border-color);
     border-radius: var(--border-radius);
     background: var(--bg-primary);
     cursor: pointer;
     transition: all var(--transition-fast);
+    min-height: 64px;
 }
 
 .step-type-btn.active {
@@ -3558,26 +3597,38 @@ body::before {
 
 .step-type-btn:hover:not(.active) {
     border-color: var(--text-muted);
+    background: var(--bg-secondary);
 }
 
 .step-type-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
+    line-height: 1;
 }
 
 .step-type-name {
     font-weight: 600;
+    font-size: 0.8rem;
     color: var(--text-primary);
 }
 
 .step-type-desc {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: var(--text-muted);
+    white-space: nowrap;
 }
 
 #generateStepsBtn {
-    min-width: 120px;
-    height: fit-content;
-    padding: var(--spacing-md) var(--spacing-lg);
+    min-width: 80px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+#generateStepsBtn .generate-icon {
+    font-size: 1.1rem;
 }
 
 #generateStepsBtn.loading {
@@ -4314,16 +4365,27 @@ body::before {
 
     /* 步骤生成器 - 改为垂直布局 */
     .step-generator-row {
-        flex-direction: column;
-        gap: var(--spacing-sm);
+        flex-wrap: wrap;
     }
 
-    .step-generator-row .btn {
+    .step-type-selector {
         width: 100%;
     }
 
+    .step-type-btn {
+        min-height: 56px;
+        padding: var(--spacing-xs);
+    }
+
+    .step-type-desc {
+        display: none;
+    }
+
     #generateStepsBtn {
-        min-width: 100%;
+        width: 100%;
+        flex-direction: row;
+        justify-content: center;
+        padding: var(--spacing-sm);
     }
 }
 
@@ -4416,23 +4478,19 @@ body::before {
         padding: var(--spacing-sm) var(--spacing-lg);
     }
 
-    /* 步骤类型选择器 - 两列布局 */
-    .step-type-selector {
-        flex-wrap: wrap;
+    /* 步骤类型选择器 - 紧凑布局 */
+    .step-type-icon {
+        font-size: 1rem;
     }
 
-    .step-type-btn {
-        flex: 1 1 calc(50% - var(--spacing-xs));
-        min-width: 120px;
-        padding: var(--spacing-sm);
+    .step-type-name {
+        font-size: 0.75rem;
     }
 
-    .step-type-btn:last-child {
-        flex-basis: 100%;
-    }
-
-    .step-type-desc {
-        display: none;
+    .coach-option-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 1.3rem;
     }
 
     /* 挑战图标和颜色网格 - 6列 */
@@ -4557,22 +4615,27 @@ body::before {
         padding: var(--spacing-sm) var(--spacing-md);
     }
 
-    /* 步骤类型选择器 - 单列水平布局 */
+    /* 步骤类型选择器 - 极小屏幕 */
     .step-type-btn {
-        flex: 1 1 100%;
-        flex-direction: row;
-        justify-content: flex-start;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm) var(--spacing-md);
+        min-height: 52px;
     }
 
     .step-type-icon {
-        font-size: 1.25rem;
+        font-size: 0.9rem;
     }
 
-    .step-type-desc {
-        display: block;
-        margin-left: auto;
+    .step-type-name {
+        font-size: 0.7rem;
+    }
+
+    .coach-option-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1.1rem;
+    }
+
+    .coach-option-name {
+        font-size: 0.65rem;
     }
 
     /* 挑战图标和颜色网格 - 5列 */
