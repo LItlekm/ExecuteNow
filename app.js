@@ -290,6 +290,196 @@ class SettingsManager {
     }
 }
 
+// ==================== 番茄钟计时器 ====================
+
+class PomodoroTimer {
+    constructor(app) {
+        this.app = app;
+        this.focusDuration = 25 * 60; // 25分钟（秒）
+        this.breakDuration = 5 * 60;  // 5分钟（秒）
+        this.timeLeft = this.focusDuration;
+        this.isRunning = false;
+        this.isBreak = false;
+        this.interval = null;
+        this.todayCount = this.loadTodayCount();
+        this.enabled = false;
+
+        this.initElements();
+        this.updateUI();
+    }
+
+    initElements() {
+        this.container = document.getElementById('pomodoroContainer');
+        this.body = document.getElementById('pomodoroBody');
+        this.timeDisplay = document.getElementById('pomodoroTime');
+        this.labelDisplay = document.getElementById('pomodoroLabel');
+        this.todayDisplay = document.getElementById('todayPomodoros');
+        this.toggleBtn = document.getElementById('pomodoroToggleBtn');
+        this.startBtn = document.getElementById('pomodoroStartBtn');
+        this.resetBtn = document.getElementById('pomodoroResetBtn');
+
+        this.toggleBtn?.addEventListener('click', () => this.toggle());
+        this.startBtn?.addEventListener('click', () => this.startPause());
+        this.resetBtn?.addEventListener('click', () => this.reset());
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        if (this.body) {
+            this.body.style.display = this.enabled ? 'block' : 'none';
+        }
+        if (this.toggleBtn) {
+            this.toggleBtn.textContent = this.enabled ? '收起' : '启用';
+        }
+        if (!this.enabled) {
+            this.pause();
+        }
+    }
+
+    startPause() {
+        if (this.isRunning) {
+            this.pause();
+        } else {
+            this.start();
+        }
+    }
+
+    start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.interval = setInterval(() => this.tick(), 1000);
+        this.updateUI();
+    }
+
+    pause() {
+        this.isRunning = false;
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+        this.updateUI();
+    }
+
+    reset() {
+        this.pause();
+        this.isBreak = false;
+        this.timeLeft = this.focusDuration;
+        this.updateUI();
+    }
+
+    tick() {
+        this.timeLeft--;
+        if (this.timeLeft <= 0) {
+            this.complete();
+        }
+        this.updateUI();
+    }
+
+    complete() {
+        this.pause();
+        if (!this.isBreak) {
+            // 专注完成
+            this.todayCount++;
+            this.saveTodayCount();
+            this.app.showToast('专注完成！休息一下吧 🍅', 'success');
+            this.playNotification();
+            // 切换到休息
+            this.isBreak = true;
+            this.timeLeft = this.breakDuration;
+        } else {
+            // 休息完成
+            this.app.showToast('休息结束，继续加油！', 'info');
+            this.playNotification();
+            this.isBreak = false;
+            this.timeLeft = this.focusDuration;
+        }
+        this.updateUI();
+    }
+
+    playNotification() {
+        // 振动
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+        }
+        // 尝试播放系统提示音
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            // 忽略音频错误
+        }
+    }
+
+    updateUI() {
+        const mins = Math.floor(this.timeLeft / 60);
+        const secs = this.timeLeft % 60;
+
+        if (this.timeDisplay) {
+            this.timeDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        if (this.labelDisplay) {
+            this.labelDisplay.textContent = this.isBreak ? '休息时间' : '专注时间';
+        }
+        if (this.todayDisplay) {
+            this.todayDisplay.textContent = this.todayCount;
+        }
+        if (this.container) {
+            this.container.classList.toggle('running', this.isRunning);
+            this.container.classList.toggle('break', this.isBreak);
+        }
+        if (this.startBtn) {
+            this.startBtn.textContent = this.isRunning ? '暂停' : '开始';
+        }
+    }
+
+    loadTodayCount() {
+        try {
+            const saved = localStorage.getItem('plancoach_pomodoro_today');
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.date === new Date().toDateString()) {
+                    return data.count;
+                }
+            }
+        } catch (e) {
+            // 忽略错误
+        }
+        return 0;
+    }
+
+    saveTodayCount() {
+        try {
+            localStorage.setItem('plancoach_pomodoro_today', JSON.stringify({
+                date: new Date().toDateString(),
+                count: this.todayCount
+            }));
+        } catch (e) {
+            // 忽略错误
+        }
+    }
+
+    // 进入专注模式时重置
+    onEnterFocusMode() {
+        if (this.enabled && !this.isRunning) {
+            this.reset();
+        }
+    }
+
+    // 退出专注模式时暂停
+    onExitFocusMode() {
+        this.pause();
+    }
+}
+
 // ==================== 主应用 ====================
 
 class App {
@@ -355,6 +545,10 @@ class App {
 
         this.initElements();
         this.initEventListeners();
+
+        // 番茄钟
+        this.pomodoroTimer = new PomodoroTimer(this);
+
         this.applyTheme();
         this.render();
         this.updateUIText();
@@ -365,6 +559,24 @@ class App {
             stepsCompleted: 0,
             timeSpent: 0
         });
+
+        // 注册 Service Worker (PWA)
+        this.registerServiceWorker();
+    }
+
+    // 注册 Service Worker
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('SW registration failed:', error);
+                    });
+            });
+        }
     }
 
     // ==================== 初始化 ====================
@@ -375,6 +587,11 @@ class App {
         this.taskList = document.getElementById('taskList');
         this.taskCount = document.getElementById('taskCount');
         this.emptyState = document.getElementById('emptyState');
+
+        // 搜索
+        this.searchInput = document.getElementById('taskSearchInput');
+        this.clearSearchBtn = document.getElementById('clearSearchBtn');
+        this.searchQuery = '';
 
         // 连续天数显示区
         this.streakDisplay = document.getElementById('streakDisplay');
@@ -718,6 +935,27 @@ class App {
         });
         this.clearDataBtn.addEventListener('click', () => this.clearAllData());
 
+        // 数据导出/导入
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const importDataBtn = document.getElementById('importDataBtn');
+        const importFileInput = document.getElementById('importFileInput');
+        exportDataBtn?.addEventListener('click', () => this.exportData());
+        importDataBtn?.addEventListener('click', () => importFileInput?.click());
+        importFileInput?.addEventListener('change', (e) => this.importData(e.target.files[0]));
+
+        // 任务搜索
+        this.searchInput?.addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.trim().toLowerCase();
+            this.clearSearchBtn?.classList.toggle('visible', this.searchQuery.length > 0);
+            this.render();
+        });
+        this.clearSearchBtn?.addEventListener('click', () => {
+            this.searchQuery = '';
+            if (this.searchInput) this.searchInput.value = '';
+            this.clearSearchBtn?.classList.remove('visible');
+            this.render();
+        });
+
         // 语言切换
         const langInputs = this.languageSelector.querySelectorAll('input[name="language"]');
         langInputs.forEach(input => {
@@ -935,14 +1173,36 @@ class App {
     }
 
     renderTaskList() {
-        const tasks = this.taskManager.getAllTasks();
+        let tasks = this.taskManager.getAllTasks();
+        const totalCount = tasks.length;
 
-        this.taskCount.textContent = this.t('tasks_count', { count: tasks.length });
+        // 搜索过滤
+        if (this.searchQuery) {
+            tasks = tasks.filter(t =>
+                t.name.toLowerCase().includes(this.searchQuery) ||
+                t.steps.some(s => s.content.toLowerCase().includes(this.searchQuery))
+            );
+        }
+
+        this.taskCount.textContent = this.searchQuery
+            ? `${tasks.length}/${totalCount} ${this.t('unit_tasks') || '个任务'}`
+            : this.t('tasks_count', { count: totalCount });
 
         if (tasks.length === 0) {
             this.taskList.innerHTML = '';
-            this.taskList.appendChild(this.emptyState);
-            this.emptyState.style.display = 'block';
+            if (this.searchQuery) {
+                // 搜索无结果
+                this.taskList.innerHTML = `
+                    <div class="empty-state" style="display: block;">
+                        <span class="empty-icon">🔍</span>
+                        <p class="empty-text">未找到匹配的任务</p>
+                        <p class="empty-hint">试试其他关键词</p>
+                    </div>
+                `;
+            } else {
+                this.taskList.appendChild(this.emptyState);
+                this.emptyState.style.display = 'block';
+            }
             return;
         }
 
@@ -1090,6 +1350,9 @@ class App {
         }
 
         this.updateFocusMode();
+
+        // 番茄钟
+        this.pomodoroTimer?.onEnterFocusMode();
     }
 
     exitFocusMode() {
@@ -1102,6 +1365,10 @@ class App {
         this.currentTask = null;
         this.viewOnlyMode = false;
         this.timerPaused = false;
+
+        // 番茄钟
+        this.pomodoroTimer?.onExitFocusMode();
+
         this.render();
     }
 
@@ -2601,6 +2868,64 @@ class App {
             this.render();
             this.hideSettingsModal();
         }
+    }
+
+    // ==================== 数据导出/导入 ====================
+
+    exportData() {
+        const data = {
+            version: '1.0',
+            exportedAt: new Date().toISOString(),
+            tasks: localStorage.getItem('plancoach_tasks'),
+            settings: localStorage.getItem('plancoach_settings'),
+            usageStats: localStorage.getItem('plancoach_usage_stats'),
+            challenges: localStorage.getItem('plancoach_challenges'),
+            customTemplates: localStorage.getItem('plancoach_custom_templates')
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `任务拆解助手_备份_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.showToast('数据已导出', 'success');
+    }
+
+    async importData(file) {
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            if (!data.version) {
+                throw new Error('无效的备份文件');
+            }
+
+            if (!confirm('导入将覆盖现有数据，是否继续？')) {
+                return;
+            }
+
+            // 恢复数据
+            if (data.tasks) localStorage.setItem('plancoach_tasks', data.tasks);
+            if (data.settings) localStorage.setItem('plancoach_settings', data.settings);
+            if (data.usageStats) localStorage.setItem('plancoach_usage_stats', data.usageStats);
+            if (data.challenges) localStorage.setItem('plancoach_challenges', data.challenges);
+            if (data.customTemplates) localStorage.setItem('plancoach_custom_templates', data.customTemplates);
+
+            this.showToast('数据导入成功，页面将刷新', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } catch (e) {
+            this.showToast('导入失败：' + e.message, 'error');
+        }
+
+        // 清空 input 以便可以再次选择同一文件
+        const importFileInput = document.getElementById('importFileInput');
+        if (importFileInput) importFileInput.value = '';
     }
 
     // ==================== 自定义模板功能 ====================

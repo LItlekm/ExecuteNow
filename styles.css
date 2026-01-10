@@ -458,6 +458,73 @@ body::before {
     backdrop-filter: var(--glass-blur);
 }
 
+/* 搜索框 */
+.search-container {
+    margin-bottom: var(--spacing-md);
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-full);
+    padding: var(--spacing-xs) var(--spacing-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.15);
+}
+
+.search-icon {
+    font-size: 0.9rem;
+    margin-right: var(--spacing-sm);
+    opacity: 0.6;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    min-width: 0;
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 var(--spacing-xs);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.search-clear.visible {
+    opacity: 1;
+}
+
+.search-clear:hover {
+    color: var(--text-primary);
+}
+
+/* 搜索高亮 */
+.search-highlight {
+    background: rgba(124, 92, 255, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
 .task-list {
     display: flex;
     flex-direction: column;
@@ -870,6 +937,115 @@ body::before {
 @keyframes timerPulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* 番茄钟 */
+.pomodoro-container {
+    width: 100%;
+    max-width: 320px;
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    margin: var(--spacing-md) 0;
+}
+
+.pomodoro-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(124, 92, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pomodoro-icon {
+    font-size: 1.1rem;
+}
+
+.pomodoro-title {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.pomodoro-toggle {
+    font-size: 0.75rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.pomodoro-body {
+    padding: var(--spacing-lg);
+}
+
+.pomodoro-display {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.pomodoro-time {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-family: 'DM Sans', monospace;
+    font-variant-numeric: tabular-nums;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.02em;
+}
+
+.pomodoro-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+.pomodoro-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.pomodoro-btn {
+    min-width: 80px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.85rem;
+}
+
+.pomodoro-stats {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.pomodoro-stats strong {
+    color: var(--accent-primary);
+}
+
+/* 番茄钟运行状态 */
+.pomodoro-container.running .pomodoro-time {
+    animation: pomodoroPulse 2s ease-in-out infinite;
+}
+
+@keyframes pomodoroPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 休息状态 */
+.pomodoro-container.break .pomodoro-time {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.pomodoro-container.break .pomodoro-header {
+    background: rgba(16, 185, 129, 0.1);
 }
 
 /* 步骤卡片 */
@@ -1810,6 +1986,18 @@ body::before {
 .setting-description {
     font-size: 0.8rem;
     color: var(--text-muted);
+}
+
+/* 数据备份按钮 */
+.data-backup-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.data-backup-buttons .btn-sm {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: 0.85rem;
+    min-width: 60px;
 }
 
 /* 开关 */

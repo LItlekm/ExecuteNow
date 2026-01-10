@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#7c5cff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="拆解助手">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <!-- Cloudflare Worker 代理地址（部署后填写，例如：https://xxxx.yyy.workers.dev） -->
     <meta name="ai-proxy-url" content="https://1323301681-65hr8ej21f.ap-guangzhou.tencentscf.com">
     <title data-i18n="app_title">任务拆解助手</title>
@@ -92,6 +99,13 @@
                     <h2 class="section-title">我的任务</h2>
                     <span class="task-count" id="taskCount">0 个任务</span>
                 </div>
+                <div class="search-container" id="searchContainer">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="taskSearchInput" class="search-input" placeholder="搜索任务...">
+                        <button id="clearSearchBtn" class="search-clear">&times;</button>
+                    </div>
+                </div>
                 <div class="task-list" id="taskList">
                     <div class="empty-state" id="emptyState">
                         <span class="empty-icon">🎯</span>
@@ -132,6 +146,28 @@
                 <button id="pauseTimerBtn" class="btn btn-timer-control" title="暂停">
                     <span class="pause-icon">⏸️</span>
                 </button>
+            </div>
+
+            <!-- 番茄钟 -->
+            <div class="pomodoro-container" id="pomodoroContainer">
+                <div class="pomodoro-header">
+                    <span class="pomodoro-icon">🍅</span>
+                    <span class="pomodoro-title">番茄钟</span>
+                    <button id="pomodoroToggleBtn" class="btn btn-sm btn-ghost pomodoro-toggle">启用</button>
+                </div>
+                <div class="pomodoro-body" id="pomodoroBody" style="display: none;">
+                    <div class="pomodoro-display">
+                        <div class="pomodoro-time" id="pomodoroTime">25:00</div>
+                        <div class="pomodoro-label" id="pomodoroLabel">专注时间</div>
+                    </div>
+                    <div class="pomodoro-controls">
+                        <button id="pomodoroStartBtn" class="btn btn-primary pomodoro-btn">开始</button>
+                        <button id="pomodoroResetBtn" class="btn btn-secondary pomodoro-btn">重置</button>
+                    </div>
+                    <div class="pomodoro-stats">
+                        <span>今日番茄：<strong id="todayPomodoros">0</strong> 个</span>
+                    </div>
+                </div>
             </div>
 
             <!-- 当前步骤 -->
@@ -430,6 +466,17 @@
                             <input type="radio" name="language" value="en">
                             <span data-i18n="language_en">English</span>
                         </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <span class="setting-label">数据备份</span>
+                        <span class="setting-description">导出或导入你的数据</span>
+                    </div>
+                    <div class="data-backup-buttons">
+                        <button id="exportDataBtn" class="btn btn-secondary btn-sm">导出</button>
+                        <button id="importDataBtn" class="btn btn-secondary btn-sm">导入</button>
+                        <input type="file" id="importFileInput" accept=".json" style="display:none">
                     </div>
                 </div>
                 <div class="setting-item">
