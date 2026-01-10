@@ -1694,6 +1694,21 @@ body::before {
     margin-bottom: var(--spacing-sm);
 }
 
+.date-input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.date-input-row .form-input {
+    flex: 1;
+}
+
+.date-picker-btn {
+    min-width: 44px;
+    padding: var(--spacing-md);
+}
+
 .form-input {
     width: 100%;
     padding: var(--spacing-md);

@@ -701,6 +701,7 @@ class App {
         this.createTaskModal = document.getElementById('createTaskModal');
         this.taskNameInput = document.getElementById('taskNameInput');
         this.taskDateInput = document.getElementById('taskDateInput');
+        this.taskDatePickerBtn = document.getElementById('taskDatePickerBtn');
         this.stepTypeSelector = document.querySelectorAll('.step-type-btn');
         this.generateStepsBtn = document.getElementById('generateStepsBtn');
         this.customStepCountWrapper = document.getElementById('customStepCount');
@@ -892,6 +893,8 @@ class App {
             this.updateCreateButton();
             this.updateGenerateButton();
         });
+        this.taskDateInput?.addEventListener('focus', () => this.openTaskDatePicker());
+        this.taskDatePickerBtn?.addEventListener('click', () => this.openTaskDatePicker());
 
         // 步骤类型选择
         this.stepTypeSelector.forEach(btn => {
@@ -1281,8 +1284,8 @@ class App {
             groupedByDate[dateKey].tasks.push(task);
         });
 
-        // 按日期正序排列（越早的在前）
-        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => a.localeCompare(b));
+        // 按日期倒序排列（越近的在前）
+        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
 
         // 构建完整的 HTML
         let html = '';
@@ -1292,11 +1295,7 @@ class App {
             const groupDate = new Date(dateKey + 'T00:00:00');
             const dateLabel = this.formatDateLabel(groupDate.getTime());
             const isCollapsed = this.collapsedDateKeys.has(dateKey);
-            const tasksInGroup = [...group.tasks].sort((a, b) => {
-                const orderDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
-                if (orderDiff !== 0) return orderDiff;
-                return (b.createdAt || 0) - (a.createdAt || 0);
-            });
+            const tasksInGroup = [...group.tasks].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
             html += `
                 <div class="date-group" data-date-key="${dateKey}">
@@ -1956,6 +1955,17 @@ class App {
             return todayKey;
         }
         return selected;
+    }
+
+    openTaskDatePicker() {
+        if (!this.taskDateInput) return;
+        // Chrome/Edge 支持；不支持则 fallback 到 focus/click
+        if (typeof this.taskDateInput.showPicker === 'function') {
+            this.taskDateInput.showPicker();
+            return;
+        }
+        this.taskDateInput.focus();
+        this.taskDateInput.click();
     }
 
     loadCollapsedDates() {
