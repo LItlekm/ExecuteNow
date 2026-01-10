@@ -12,6 +12,11 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function getDateKeyFromTimestamp(timestamp = Date.now()) {
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 // ==================== 任务管理器 ====================
 
 class TaskManager {
@@ -40,6 +45,7 @@ class TaskManager {
             coachId: coachId,
             category: options.category || null,  // 任务分类（从模板继承）
             templateId: options.templateId || null,  // 来源模板ID
+            scheduledDate: options.scheduledDate || getDateKeyFromTimestamp(Date.now()),
             createdAt: Date.now(),
             completedAt: null
         };
@@ -172,6 +178,13 @@ class TaskManager {
             const data = localStorage.getItem(this.storageKey);
             if (data) {
                 this.tasks = JSON.parse(data);
+                // 兼容旧数据，补充计划日期字段
+                this.tasks.forEach(task => {
+                    if (!task.createdAt) task.createdAt = Date.now();
+                    if (!task.scheduledDate) {
+                        task.scheduledDate = getDateKeyFromTimestamp(task.createdAt || Date.now());
+                    }
+                });
             }
         } catch (e) {
             console.error('加载数据失败:', e);
@@ -521,6 +534,7 @@ class App {
         this.selectedTemplate = null;
         this.pendingDeleteTaskId = null;
         this.selectedCategory = '全部';
+        this.collapsedDateKeys = new Set(this.loadCollapsedDates());
 
         // 步骤计时器
         this.stepTimerInterval = null;
@@ -686,6 +700,7 @@ class App {
         // 创建任务弹窗
         this.createTaskModal = document.getElementById('createTaskModal');
         this.taskNameInput = document.getElementById('taskNameInput');
+        this.taskDateInput = document.getElementById('taskDateInput');
         this.stepTypeSelector = document.querySelectorAll('.step-type-btn');
         this.generateStepsBtn = document.getElementById('generateStepsBtn');
         this.customStepCountWrapper = document.getElementById('customStepCount');
@@ -1213,6 +1228,11 @@ class App {
             'completed': '✅',
             'shelved': '⏸️'
         };
+        const statusOrder = {
+            'in_progress': 0,
+            'shelved': 1,
+            'completed': 2
+        };
 
         // 渲染单个任务卡片的辅助函数
         const renderTaskCard = (task) => {
@@ -1251,46 +1271,55 @@ class App {
             `;
         };
 
-        // 分离任务：进行中 vs 已完成/已搁置
-        const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
-        const finishedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'shelved');
-
-        // 按日期分组已完成/已搁置的任务
+        // 按计划日期分组所有任务
         const groupedByDate = {};
-        finishedTasks.forEach(task => {
-            const endTime = this.getTaskEndTime(task);
-            const dateKey = this.getDateKey(endTime);
+        tasks.forEach(task => {
+            const dateKey = task.scheduledDate || getDateKeyFromTimestamp(task.createdAt || Date.now());
             if (!groupedByDate[dateKey]) {
-                groupedByDate[dateKey] = {
-                    timestamp: endTime,
-                    tasks: []
-                };
+                groupedByDate[dateKey] = { tasks: [] };
             }
             groupedByDate[dateKey].tasks.push(task);
         });
 
-        // 按日期倒序排列（最近的在前）
-        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+        // 按日期正序排列（越早的在前）
+        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => a.localeCompare(b));
 
         // 构建完整的 HTML
         let html = '';
 
-        // 1. 渲染进行中的任务（置顶）
-        html += inProgressTasks.map(renderTaskCard).join('');
-
-        // 2. 渲染已完成/已搁置的任务（按日期分组）
         sortedDateKeys.forEach(dateKey => {
             const group = groupedByDate[dateKey];
-            const dateLabel = this.formatDateLabel(group.timestamp);
+            const groupDate = new Date(dateKey + 'T00:00:00');
+            const dateLabel = this.formatDateLabel(groupDate.getTime());
+            const isCollapsed = this.collapsedDateKeys.has(dateKey);
+            const tasksInGroup = [...group.tasks].sort((a, b) => {
+                const orderDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+                if (orderDiff !== 0) return orderDiff;
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
 
-            // 添加日期分隔符
-            html += `<div class="date-separator">${dateLabel}</div>`;
-
-            // 渲染该日期下的所有任务
-            html += group.tasks.map(renderTaskCard).join('');
+            html += `
+                <div class="date-group" data-date-key="${dateKey}">
+                    <button class="date-separator date-toggle ${isCollapsed ? 'collapsed' : ''}" data-date-key="${dateKey}">
+                        <span class="date-label">${dateLabel}</span>
+                        <span class="date-count">${tasksInGroup.length} ${this.t('unit_tasks') || '个任务'}</span>
+                        <span class="date-chevron">${isCollapsed ? '▶' : '▼'}</span>
+                    </button>
+                    <div class="date-task-list" data-date-key="${dateKey}" style="${isCollapsed ? 'display:none;' : ''}">
+                        ${tasksInGroup.map(renderTaskCard).join('')}
+                    </div>
+                </div>
+            `;
         });
 
         this.taskList.innerHTML = html;
+
+        // 日期折叠切换
+        this.taskList.querySelectorAll('.date-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.toggleDateCollapse(btn.dataset.dateKey);
+            });
+        });
 
         // 绑定任务卡片事件
         this.taskList.querySelectorAll('.task-card').forEach(card => {
@@ -1891,6 +1920,11 @@ class App {
         this.customStepCount = 5;
         if (this.customStepCountInput) this.customStepCountInput.value = '5';
         if (this.customStepCountValue) this.customStepCountValue.textContent = '5';
+        if (this.taskDateInput) {
+            const todayKey = this.getDateKey(Date.now());
+            this.taskDateInput.min = todayKey;
+            this.taskDateInput.value = todayKey;
+        }
 
         // 重置步骤类型按钮状态
         this.stepTypeSelector.forEach(btn => {
@@ -1909,6 +1943,48 @@ class App {
 
     hideCreateTaskModal() {
         this.createTaskModal.classList.remove('active');
+    }
+
+    getSelectedTaskDate() {
+        const todayKey = this.getDateKey(Date.now());
+        if (!this.taskDateInput) return todayKey;
+
+        const selected = this.taskDateInput.value || todayKey;
+        // YYYY-MM-DD 形式可直接用字符串比较
+        if (selected < todayKey) {
+            this.taskDateInput.value = todayKey;
+            return todayKey;
+        }
+        return selected;
+    }
+
+    loadCollapsedDates() {
+        try {
+            const raw = localStorage.getItem('plancoach_collapsed_dates');
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveCollapsedDates() {
+        try {
+            localStorage.setItem('plancoach_collapsed_dates', JSON.stringify([...this.collapsedDateKeys]));
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    toggleDateCollapse(dateKey) {
+        if (!dateKey) return;
+        if (this.collapsedDateKeys.has(dateKey)) {
+            this.collapsedDateKeys.delete(dateKey);
+        } else {
+            this.collapsedDateKeys.add(dateKey);
+        }
+        this.saveCollapsedDates();
+        this.renderTaskList();
     }
 
     renderCoachSelector(container, selectedId) {
@@ -2502,7 +2578,12 @@ class App {
         const name = this.taskNameInput.value.trim();
         if (!name || this.tempSteps.length === 0) return;
 
-        const task = this.taskManager.createTask(name, this.tempSteps, this.selectedCoachId);
+        const task = this.taskManager.createTask(
+            name,
+            this.tempSteps,
+            this.selectedCoachId,
+            { scheduledDate: this.getSelectedTaskDate() }
+        );
         this.hideCreateTaskModal();
         this.render();
 
@@ -2608,7 +2689,8 @@ class App {
             this.previewSelectedCoachId,
             {
                 category: this.selectedTemplate.category || null,
-                templateId: this.selectedTemplate.id || null
+                templateId: this.selectedTemplate.id || null,
+                scheduledDate: this.getSelectedTaskDate()
             }
         );
 
@@ -2864,6 +2946,8 @@ class App {
         if (confirm('确定要清除所有数据吗？此操作无法撤销。')) {
             this.taskManager.clearAll();
             this.settingsManager.clearAll();
+            localStorage.removeItem('plancoach_collapsed_dates');
+            this.collapsedDateKeys.clear();
             this.applyTheme();
             this.render();
             this.hideSettingsModal();
