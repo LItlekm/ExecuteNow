@@ -746,6 +746,8 @@ class App {
         this.previewTemplateName = document.getElementById('previewTemplateName');
         this.previewCoachSelector = document.getElementById('previewCoachSelector');
         this.previewSteps = document.getElementById('previewSteps');
+        this.previewTaskDateInput = document.getElementById('previewTaskDateInput');
+        this.previewTaskDatePickerBtn = document.getElementById('previewTaskDatePickerBtn');
         this.closePreviewModal = document.getElementById('closePreviewModal');
         this.cancelUseTemplate = document.getElementById('cancelUseTemplate');
         this.confirmUseTemplate = document.getElementById('confirmUseTemplate');
@@ -893,8 +895,10 @@ class App {
             this.updateCreateButton();
             this.updateGenerateButton();
         });
-        this.taskDateInput?.addEventListener('focus', () => this.openTaskDatePicker());
-        this.taskDatePickerBtn?.addEventListener('click', () => this.openTaskDatePicker());
+        this.taskDateInput?.addEventListener('focus', () => this.openTaskDatePicker(this.taskDateInput));
+        this.taskDatePickerBtn?.addEventListener('click', () => this.openTaskDatePicker(this.taskDateInput));
+        this.previewTaskDateInput?.addEventListener('focus', () => this.openTaskDatePicker(this.previewTaskDateInput));
+        this.previewTaskDatePickerBtn?.addEventListener('click', () => this.openTaskDatePicker(this.previewTaskDateInput));
 
         // 步骤类型选择
         this.stepTypeSelector.forEach(btn => {
@@ -1944,28 +1948,28 @@ class App {
         this.createTaskModal.classList.remove('active');
     }
 
-    getSelectedTaskDate() {
+    getSelectedTaskDate(dateInput = this.taskDateInput) {
         const todayKey = this.getDateKey(Date.now());
-        if (!this.taskDateInput) return todayKey;
+        if (!dateInput) return todayKey;
 
-        const selected = this.taskDateInput.value || todayKey;
+        const selected = dateInput.value || todayKey;
         // YYYY-MM-DD 形式可直接用字符串比较
         if (selected < todayKey) {
-            this.taskDateInput.value = todayKey;
+            dateInput.value = todayKey;
             return todayKey;
         }
         return selected;
     }
 
-    openTaskDatePicker() {
-        if (!this.taskDateInput) return;
+    openTaskDatePicker(dateInput = this.taskDateInput) {
+        if (!dateInput) return;
         // Chrome/Edge 支持；不支持则 fallback 到 focus/click
-        if (typeof this.taskDateInput.showPicker === 'function') {
-            this.taskDateInput.showPicker();
+        if (typeof dateInput.showPicker === 'function') {
+            dateInput.showPicker();
             return;
         }
-        this.taskDateInput.focus();
-        this.taskDateInput.click();
+        dateInput.focus();
+        dateInput.click();
     }
 
     loadCollapsedDates() {
@@ -2667,6 +2671,14 @@ class App {
         this.selectedTemplate = template;
         this.previewSelectedCoachId = this.settingsManager.get('defaultCoach');
 
+        if (this.previewTaskDateInput) {
+            const todayKey = this.getDateKey(Date.now());
+            this.previewTaskDateInput.min = todayKey;
+            if (!this.previewTaskDateInput.value || this.previewTaskDateInput.value < todayKey) {
+                this.previewTaskDateInput.value = todayKey;
+            }
+        }
+
         this.previewTemplateName.textContent = `${template.icon} ${template.name}`;
         this.renderCoachSelector(this.previewCoachSelector, this.previewSelectedCoachId);
 
@@ -2700,7 +2712,7 @@ class App {
             {
                 category: this.selectedTemplate.category || null,
                 templateId: this.selectedTemplate.id || null,
-                scheduledDate: this.getSelectedTaskDate()
+                scheduledDate: this.getSelectedTaskDate(this.previewTaskDateInput)
             }
         );
 

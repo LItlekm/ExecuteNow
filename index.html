@@ -383,6 +383,14 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
+                    <label class="form-label">计划日期</label>
+                    <div class="date-input-row">
+                        <input type="date" id="previewTaskDateInput" class="form-input" inputmode="none">
+                        <button type="button" class="btn btn-secondary date-picker-btn" id="previewTaskDatePickerBtn" title="选择日期">📅</button>
+                    </div>
+                    <p class="form-hint">只能选择今天及以后的日期</p>
+                </div>
+                <div class="form-group">
                     <label class="form-label">选择教练</label>
                     <div class="coach-selector" id="previewCoachSelector">
                         <!-- 教练选项将动态生成 -->
